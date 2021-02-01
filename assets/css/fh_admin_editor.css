@@ -1,0 +1,230 @@
+a, a:visited {
+  color: inherit;
+}
+
+.wp-block  { margin: auto; max-width: 1150px; }
+
+.align-center {
+  margin: 0 auto;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.framed {
+  background: whitesmoke;
+}
+
+.sidebar-panel {
+  padding: 1em;
+  margin-bottom: 1.5em;
+}
+
+.sidebar-panel h2 {
+  margin-top: 0 !important;
+}
+
+.sidebar-panel h3 {
+  color: grey !important;
+}
+
+.sidebar-panel .wp-block-button .wp-block-button__link {
+  font-size: 0.9em;
+  margin-bottom: 0.5em;
+  width: 100%;
+  padding: 0.67em 1em;
+}
+
+.awards {
+  /*background-color: whitesmoke;*/
+  border: 5px dotted whitesmoke;
+  padding: 1.5em 1em;
+  margin-top: 2em;
+}
+
+.awards:before {
+  color: gainsboro;
+  content: 'Add awards here... Use "inline image" on any paragraph block to insert images next to each other.';
+  font-size: 0.8em;
+  display: block;
+}
+
+.awards:after {
+  color: gainsboro;
+  content: 'Awards Section:' !important;
+  display: block;
+  font-weight: bold;
+  padding-left: 1em;
+  padding-top: 0.3em;
+}
+
+.awards img {
+  max-height: 100px;
+  width: auto !important;
+}
+
+.about {
+  /*background-color: whitesmoke;*/
+  border: 5px dotted whitesmoke;
+  padding: 1.5em 1em;
+}
+
+.strategies-block {
+  margin: 1em 0 !important;
+  padding: 1em 1em 0;
+}
+
+.strategies-edit-zone {
+  border: 5px dotted whitesmoke;
+  padding: 1.5em 1em;
+}
+
+.strategies-edit-zone:before {
+  color: gainsboro;
+  content: 'This block generates a display using strategy tags and descriptions. Click on a strategy to edit its description.';
+  font-size: 0.8em;
+  display: block;
+}
+
+.strategies-edit-zone:after {
+  color: gainsboro;
+  content: 'Strategies Page Auto-Content Section:' !important;
+  display: block;
+  font-weight: bold;
+  padding-left: 1em;
+  padding-top: 0.3em;
+}
+
+.about:before {
+  color: gainsboro;
+  content: 'Select and replace the content below with actual manager information.';
+  display: block;
+  font-size: 0.8em;
+}
+
+.about:after {
+  color: gainsboro;
+  content: 'About Section:' !important;
+  display: block;
+  font-weight: bold;
+  padding-left: 1em;
+  padding-top: 0.3em;
+}
+
+.post-strategies:before {
+  color: gainsboro;
+  content: 'This section displays the manager\'s strategy tags. Use the tags editor in the props panel to update this list.';
+  display: block;
+  font-size: 0.8em;
+}
+
+.post-strategies:after {
+  color: gainsboro;
+  content: 'Strategies Section:' !important;
+  display: block;
+  font-weight: bold;
+  padding-left: 1em;
+  padding-top: 0.3em;
+}
+
+.post-strategies p {
+  margin: 0.5em 0 !important;
+}
+
+.post-strategies,
+.video-gallery {
+  /*background-color: whitesmoke;*/
+  border: 5px dotted whitesmoke;
+  padding: 1.5em 1em;
+  margin-top: 2em;
+}
+
+.video-gallery:before {
+  color: gainsboro;
+  content: 'Add videos here... Add them right next to each other using "insert after" or "duplicate".';
+  font-size: 0.8em;
+  display: block;
+}
+
+.video-gallery:after {
+  color: gainsboro;
+  content: 'Video Gallery:' !important;
+  display: block;
+  font-weight: bold;
+  padding-left: 1em;
+  padding-top: 0.3em;  
+}
+
+.video-gallery > div > .wp-block-embed {
+  display: inline-block;
+  width: 31%;
+  margin: 1em 2% 1em 0;
+  vertical-align: top;
+}
+
+.video-gallery figure > div:before {
+  content: "";
+  display: block;
+  padding-top: 56.25%;
+}
+
+.cta-sidebar {
+  /*background-color: whitesmoke;*/
+  border: 5px dotted whitesmoke;
+  padding: 1.5em 1em 0.3em;
+}
+
+.cta-sidebar:before {
+  color: gainsboro;
+  content: 'Add banner ads / call 2 action content here...';
+  font-size: 0.8em;
+  display: block;
+}
+
+.cta-sidebar:after {
+  color: gainsboro;
+  content: 'Sidebar CTA Panel:' !important;
+  display: block;
+  font-weight: bold;
+  padding-left: 1em;
+  padding-top: 0.3em; 
+}
+
+.cta-sidebar .wp-block-group__inner-container {
+  padding-top: 1em;
+}
+
+.user-notes {
+  background-color: cornsilk;
+  /*border: 1px solid gainsboro;*/
+  padding: 1em 3em 0.1em 1em;
+  font-size: 0.8em;
+  color: dimgrey;
+  margin-top: 2em;
+}
+
+.user-notes:before {
+  color: red;
+  content: 'User Notes: (Delete Me!)';
+  display: block;
+  font-weight: bold;
+}
+
+.user-notes ul li {
+  margin: 0 1.67em 1.34em !important;
+}
+
+.factsheets:before {
+  color: gainsboro;
+  content: 'Factsheets Panel:';    
+  display: block;
+  font-weight: bold;
+}
+
+.media:before {
+  color: gainsboro;
+  content: 'Media Panel:';    
+  display: block;
+  font-weight: bold;
+}

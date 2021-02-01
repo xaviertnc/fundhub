@@ -1,0 +1,183 @@
+/* --------------------- */
+/* Post Strategies Block */
+/* --------------------- */
+
+.post-strategies-block { /* ul tag */
+  list-style: none;
+  margin: -0.67em 0 0;
+  padding: 0;
+}
+
+.post-strategies-block a {
+  color: inherit;
+  display: block;
+  padding: 0 0.67em 0.1em;
+  text-decoration: none;
+}
+
+.post-strategies-block li {
+  background: #34343c;
+  border-radius: 4px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.2);
+  color: white;
+  display: inline-block;
+  margin: 0.34em 0.34em 0.34em 0;
+  padding: 0;
+}
+
+.post-strategies-block li:hover {
+  color: silver;
+}
+
+
+/* -------------------------- */
+/* Strategies Tag Could Block */
+/* -------------------------- */
+
+.strategies-block { /* ul tag */
+  list-style: none;
+  margin: 0 0 3em;
+  padding: 0;
+}
+
+.strategies-block a {
+  color: inherit;
+  display: block;
+  padding: 2px 1em 3px;
+  text-decoration: none;
+  font-size: 0.85em;
+}
+
+.strategies-block li {
+  background: white;
+  border: 1px solid gainsboro;
+  box-shadow: 0 0 5px rgba(0,0,0,0.2);
+  color: dimgrey;
+  display: inline-block;
+  margin: 0.34em;
+  padding: 0;
+}
+
+.strategies-block li:hover {
+  color: silver;
+}
+
+
+/* -------------------------- */
+/* Strategy Information Block */
+/* -------------------------- */
+
+.strategy-block {
+  margin: 3em 0;
+}
+
+.strategy-block .anchor {
+  display: block;
+  position: relative;
+  visibility: hidden;
+  top: -72px;
+}
+
+.strategy-block dt {
+  background: black;
+  border-radius: 5px;
+  color: white;
+  font-family: Arial, sans-serif;
+  font-weight: bolder;
+  line-height: 1.2em;
+  padding: 0.67em 1em;
+}
+
+.strategy-block dd {
+  border: 1px solid transparent;
+  font-size: 1em;
+  font-weight: normal;
+  margin: 0.34em 0.67em;
+}
+
+.strategy-block h5 {
+  color: inherit;
+  font-size: 1em;
+  margin: 1.5em 0.67em 0.5em;
+}
+
+.strategy-block ul {
+  padding: 0;
+  margin: 0 0.67em;
+}
+
+/*.strategy-block li {*/
+/*  border-radius: 4px;*/
+/*  display: inline-block;*/
+/*  margin: 0.34em 0.67em 0.34em 0;*/
+/*}*/
+
+/*.strategy-block li:hover {*/
+/*  box-shadow: 0 0 7px rgba(0,0,0,0.1);*/
+/*}*/
+
+
+/* ---------------- */
+/* Wordpress Blocks */
+/* ---------------- */
+
+.is-vertically-aligned-center,
+.are-vertically-aligned-center {
+  align-items: center;
+}
+
+.wp-block-media-text__content {
+  padding: 1em;
+}
+
+.wp-block-button {
+  display: inline-block;
+  border: none;
+}
+
+.wp-block-media-text {
+  display: grid;
+}
+
+.wp-block-media-text img {
+  width: 100%;
+  height: auto;
+}
+
+.wp-block-button__link {
+  color: #fff;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 1.125em;
+  padding: .667em 1.333em;
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: break-word;
+}
+
+.is-style-outline > .wp-block-button__link {
+  background-color: transparent;
+  border: 1px solid;
+  border-radius: 4px;
+}
+
+.has-text-align-center {
+  text-align: center;
+}
+
+.has-text-align-right {
+  text-align: right;
+}
+
+.aligncenter {
+  text-align: center;
+  clear: both;
+}
+
+.has-white-color {
+  color: white;
+}
+
+.has-vivid-cyan-blue-color {
+  color: #25ade3;
+}

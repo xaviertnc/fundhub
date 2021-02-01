@@ -1,0 +1,151 @@
+.wp-block[data-type="core/html"] textarea {
+  border: 1px solid;
+  font-family: "courier new", mono, sans-serif;
+  font-size: 11px;
+  padding: 3px 7px;
+}
+
+.strategy-block {
+	border: 1px solid transparent;
+	margin: 3em 0;
+	padding: 0 1em;
+}
+
+.strategy-block dt {
+    background: black;
+    color: white;
+    font-size: 1.34em;
+    font-weight: bolder;
+    padding: 0.34em 0.67em;
+    margin: 0;
+}
+
+.strategy-block dd {
+	border: 1px solid black;
+	color: #343434;
+	font-size: 1em;
+	font-weight: normal;
+    padding: 0.34em 0.67em;
+	margin: 0;
+	min-height: 2.67em;
+}
+
+.strategy-block .rich-text {
+	border: 1px solid black;
+	padding: 0.34em 0.67em;
+	min-height: 2.67em;
+}
+
+.strategy-block .rich-text:hover,
+.strategy-block .rich-text:focus {
+	background: aliceblue;
+	color: cadetblue;
+	cursor: pointer;
+}
+
+.strategy-block h5 {
+    font-size: 1.1rem !important;
+    padding: 0 0.67em;
+    margin: 1em 0 0.5em !important;
+}
+
+.strategies-block {
+  list-style: none !important;
+  margin: 3em 0;
+}
+
+.post-strategies-block,
+.strategy-block ul {
+    list-style: none !important;
+    margin: 0 !important;
+    margin-bottom: 2em !important;
+}
+
+.post-strategies-block {
+  padding: 0 !important;
+}
+
+.strategy-block ul {
+  padding: 0 0.67em !important;
+}
+
+.strategies-block li,
+.post-strategies-block li,
+.strategy-block li {
+	/*border: 1px solid gainsboro;*/
+	background: #32373c;
+	border-radius: 15px;
+	color: white;
+	display: inline-block;
+	padding: 0 0.67em !important;
+	margin: 0.3em !important;
+	margin-left: 0 !important;
+}
+
+.post-strategies-block a,
+.strategies-block a,
+.post-strategies-block a:visited,
+.strategies-block a:visited {    
+	text-decoration: none;
+	font-size: 0.9em;
+}
+
+.post-strategies-block a:focus,
+.strategies-block a:focus,
+.post-strategies-block a:hover,
+.strategies-block a:hover {
+	color: silver;
+}
+
+.please-wait {
+  line-height: 3em;
+}
+
+.please-wait span {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 1em;
+}
+
+.lds-ring {
+  display: inline-block;
+  position: relative;
+  width: 2em;
+  height: 2em;
+  vertical-align: middle;
+}
+
+.lds-ring div {
+  box-sizing: border-box;
+  display: block;
+  position: absolute;
+  width: 1.5em;
+  height: 1.5em;
+  margin: 2px;
+  border: 2px solid dimgrey;
+  border-radius: 50%;
+  animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  border-color: dimgrey transparent transparent transparent;
+}
+
+.lds-ring div:nth-child(1) {
+  animation-delay: -0.45s;
+}
+
+.lds-ring div:nth-child(2) {
+  animation-delay: -0.3s;
+}
+
+.lds-ring div:nth-child(3) {
+  animation-delay: -0.15s;
+}
+
+@keyframes lds-ring {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+

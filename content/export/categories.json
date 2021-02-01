@@ -1,0 +1,16 @@
+[
+    {
+        "term_id": 2,
+        "name": "Asset Manager",
+        "slug": "asset-manager",
+        "description": "",
+        "parent": 0
+    },
+    {
+        "term_id": 1,
+        "name": "Uncategorised",
+        "slug": "uncategorised",
+        "description": "",
+        "parent": 0
+    }
+]

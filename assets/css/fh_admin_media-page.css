@@ -1,0 +1,65 @@
+.media-wrap {
+  display: flex;
+}
+
+.dir-tree {
+  float: left;
+  border: 1px solid lightgray;
+  padding: 6px;
+  min-height: 3em;
+  width: 10%;
+  margin-top: 12px;
+  margin-right: 1em;
+  background-color: white;
+  min-width: 110px;
+}
+
+.dir-tree ul {
+  padding: 0;
+  margin: 0;
+}
+
+.dir-tree li {
+  padding: 4px 8px 6px;
+}
+
+.dir-tree a,
+.dir-tree a:link {
+  text-decoration: none;
+  font-size: 1em;
+}
+
+.dir-tree a:hover {
+  text-decoration: underline;
+}
+
+.dir-tree .current a {
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+.show-all {
+  background: steelblue;
+}
+
+.show-docs {
+  background: crimson;
+}
+
+.show-all a,
+.show-docs a {
+  color: white;
+}
+
+.L-1 {
+  padding-left: 0.5em;
+}
+
+.L-1:before {
+  content: '- ';
+}
+
+.dir-files {
+  float:right;
+  width: 87%;
+}
