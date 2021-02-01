@@ -29,7 +29,7 @@ function fh_setup_custom_posts()
    );
 
    register_taxonomy( 'strategy', array( 'asset-manager' ), $args );
-     
+
   $labels = array(
 	'name' => __( 'Asset Managers', 'fundhub' ),
 	'singular_name' => __( 'Asset Manager', 'fundhub' ),
@@ -58,7 +58,7 @@ function fh_setup_custom_posts()
 	'query_var' => true,
 	'menu_icon' => 'dashicons-businessperson',
 	'menu_position' => 5,
-	'supports' => array( 'title', 'editor', 'thumbnail', 'revisions', 
+	'supports' => array( 'title', 'editor', 'thumbnail', 'revisions',
 	   'author', 'custom-fields', 'page-attributes' ),
 	'taxonomies' => array( 'strategy' ),
   ) );

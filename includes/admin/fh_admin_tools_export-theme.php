@@ -54,7 +54,7 @@ function fh_export_attachments( $attachments )
 {
   $export = array();
   foreach ( $attachments as $attachment )
-  {        
+  {
     $export_item = new stdClass();
     $export_item->post_id = $attachment->ID;
     $export_item->post_guid = $attachment->guid;
@@ -99,7 +99,7 @@ function fh_export_page( $page )
  * and determine if it's a local or external file href.
  * Also check if the href points inside the WP media library
  * and find its matching attachment post and ID if possible.
- * 
+ *
  * PS: Duplicate HREFS are removed before processing.
  */
 function fh_get_post_content_files( $post_content, $post_attachments )
@@ -144,7 +144,7 @@ function fh_get_post_content_files( $post_content, $post_attachments )
           $file_href = str_replace( $uploads_path, '', $raw_file_href );
           //echo '<pre>file_href: ', print_r( $file_href, true ), '</pre>';
           $wp_attachment_id = fh_get_attachment_id( $file_href );
-          $wp_post_attachment = fh_find_object_by( $post_attachments, 
+          $wp_post_attachment = fh_find_object_by( $post_attachments,
             'post_id', $wp_attachment_id ) ? 1 : 0;
         }
       }
@@ -180,8 +180,8 @@ function fh_get_other_media( $post_content_files = null )
     $args = array(
       'post_type' => 'attachment',
       'post__in' => $shared_attachment_ids
-    ); 
-    $attachments = get_posts( $args );   
+    );
+    $attachments = get_posts( $args );
     //echo '<pre>attachments: ', print_r( $attachments, true ), '</pre>';
   }
   return $attachments;
@@ -195,7 +195,7 @@ function fh_action_export()
   //echo '<pre>REQUEST: ', print_r( $_REQUEST, true ), '</pre>';
   echo '<pre>SITE_URL: ', print_r( SITE_URL, true ), '</pre>';
   echo '<pre>UPLOADS: ', print_r( UPLOADS, true ), '</pre>';
-  
+
   $export_basedir = THEME_DIR . '/export';
 
   // Get categories
@@ -230,7 +230,7 @@ function fh_action_export()
   $nav_menus = array();
   $nav_menu_terms = fh_get_taxonomy_terms( 'nav_menu' );
   // Sort Menu Terms by Name
-  $nav_menu_terms = fh_sort_objects_by( $nav_menu_terms, 'name' );      
+  $nav_menu_terms = fh_sort_objects_by( $nav_menu_terms, 'name' );
   // Get Nav Menu Item Posts
   foreach ( $nav_menu_terms as $nav_menu_term )
   {
@@ -380,13 +380,13 @@ function fh_action_export()
       }
     }
   }
-  
+
 //   $zip = new ZipArchive;
 //   $zip->open( THEME_DIR . '/export.zip', ZipArchive::CREATE );
 //   $files_to_zip = array();
 //   $zip->addFile( THEME_DIR . '/export' );
 //   $zip->close();
-  
+
 }
 
 add_action( 'admin_post_fh_export', 'fh_action_export' );

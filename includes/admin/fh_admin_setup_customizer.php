@@ -8,12 +8,12 @@ function fh_customize_register( $wp_customize )
     'title' => 'Additional JS (Google, Facebook...)',
     'priority' => 500
   ) );
-    
+
   $wp_customize->add_setting( 'fh_header_scripts', array(
       'capability' => 'edit_theme_options',
       'type' => 'option'
   ) );
-    
+
   $wp_customize->add_setting( 'fh_noscripts', array(
       'capability' => 'edit_theme_options',
       'type' => 'option'
@@ -23,7 +23,7 @@ function fh_customize_register( $wp_customize )
       'capability' => 'edit_theme_options',
       'type' => 'option'
   ) );
-  
+
   $wp_customize->add_control( new WP_Customize_Code_Editor_Control(
     $wp_customize, 'fh_header_scripts', array(
       'code_type' => 'htmlmixed',
@@ -39,7 +39,7 @@ function fh_customize_register( $wp_customize )
      'label' => __( 'No Script Tags' ),
      'description' => __( 'Add tracking and other no-script tags here.', 'fundhub' ),
   ) ) );
-  
+
   $wp_customize->add_control( new WP_Customize_Code_Editor_Control(
     $wp_customize, 'fh_footer_scripts', array(
       'code_type' => 'htmlmixed',
@@ -49,4 +49,4 @@ function fh_customize_register( $wp_customize )
   ) ) );
 }
 
-add_action( 'customize_register', 'fh_customize_register' ); 
+add_action( 'customize_register', 'fh_customize_register' );

@@ -14,7 +14,7 @@ function fh_ajax_get_media()
     'numberposts' => -1,
     'post_status' => null,
     'post_parent' => null, // any parent
-  ); 
+  );
   $attachments = get_posts($args);
   if ($attachments) {
     foreach ($attachments as $post) {

@@ -25,7 +25,7 @@ get_header(); ?>
       position: relative;
       height: 100vh;
     }
-    
+
     #error .error {
       position: absolute;
       left: 50%;
@@ -34,21 +34,21 @@ get_header(); ?>
           -ms-transform: translate(-50%, -50%);
               transform: translate(-50%, -50%);
     }
-    
+
     .error {
       max-width: 767px;
       width: 100%;
       line-height: 1.4;
       padding: 0px 15px;
     }
-    
+
     .error .error-404 {
       position: relative;
       height: 150px;
       line-height: 150px;
       margin-bottom: 25px;
     }
-    
+
     .error .error-404 h1 {
       color: gainsboro;
       font-family: 'TeXGyreAdventor-Regular', sans-serif;
@@ -57,21 +57,21 @@ get_header(); ?>
       margin: 0px;
       text-transform: uppercase;
     }
-    
+
     .error h2 {
       font-size: 26px;
       font-weight: 700;
       margin: 0;
       color: white;
     }
-    
+
     .error p {
       font-size: 14px;
       font-weight: 500;
       margin-bottom: 0px;
       text-transform: uppercase;
     }
-    
+
     .error a {
       font-family: Arial, Helvetica, sans-serif;
       display: inline-block;
@@ -88,11 +88,11 @@ get_header(); ?>
       -webkit-transition: 0.2s all;
       transition: 0.2s all;
     }
-    
+
     .error a:hover {
       opacity: 0.8;
     }
-    
+
     @media only screen and (max-width: 767px) {
       .error .error-404 {
         height: 110px;
@@ -101,7 +101,7 @@ get_header(); ?>
       .error .error-404 h1 {
         font-size: 7rem;
       }
-    }        
+    }
 </style>
 
 <div id="error">
@@ -121,7 +121,7 @@ get_header(); ?>
 
 </main>
 <!-- /Page Content -->
-    
+
 </section>
 <!-- /SITE CONTENT -->
 

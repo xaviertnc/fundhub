@@ -1,31 +1,31 @@
 <?php
 /**
  * fh-widget-callout.php
- * 
+ *
  * Fund Hub Callout (Call to Action) Widget
- * 
+ *
  * Theme: FUNDHUB
  * Author: Neels Moller
  * Version 2.0.0
- * 
+ *
  */
 class FH_Callout extends WP_Widget {
-  
+
   public function __construct()
   {
     parent::__construct(
-  
-      // Base ID of your widget
-      'fh_callout', 
-  
-      // Widget name will appear in UI
-      __('FundHub: Call To Action', 'fundhub'), 
 
-      array( 'description' => __( 'Call to action widget', 'fundhub' ) ) 
+      // Base ID of your widget
+      'fh_callout',
+
+      // Widget name will appear in UI
+      __('FundHub: Call To Action', 'fundhub'),
+
+      array( 'description' => __( 'Call to action widget', 'fundhub' ) )
     );
   }
 
-  
+
   // Widget Frontend - Render
   public function widget( $args, $instance )
   {
@@ -58,7 +58,7 @@ class FH_Callout extends WP_Widget {
     else
     {
       $image_alt = __( 'Click here to manage your CPD points', 'fundhub' );
-    }    
+    }
     if( isset( $instance[ 'image_uri' ] ) )
     {
       $image_uri = $instance[ 'image_uri' ];
@@ -66,7 +66,7 @@ class FH_Callout extends WP_Widget {
     else
     {
       $image_uri = '';
-    }    
+    }
     if( isset( $instance[ 'title' ] ) )
     {
       $title = $instance[ 'title' ];
@@ -82,7 +82,7 @@ class FH_Callout extends WP_Widget {
     else
     {
       $link = 'https://thecpdhub.co.za';
-    }    
+    }
     if( isset( $instance[ 'class' ] ) )
     {
       $class = $instance[ 'class' ];
@@ -90,11 +90,11 @@ class FH_Callout extends WP_Widget {
     else
     {
       $class = 'cta-the-cpd-hub';
-    }    
+    }
 ?>
 
 <p>
-  <label for="<?=$this->get_field_id( 'image_uri' )?>">CTA Image</label> 
+  <label for="<?=$this->get_field_id( 'image_uri' )?>">CTA Image</label>
   <img class="<?=$this->id?>_img" src="<?=esc_attr( $image_uri )?>"
     style="margin:0;padding:0;max-width:100%;display:block">
   <input class="widefat <?= $this->id ?>_url" name="<?=
@@ -105,25 +105,25 @@ class FH_Callout extends WP_Widget {
       style="margin-top:5px;">
 </p>
 <p>
-  <label for="<?=$this->get_field_id( 'image_alt' )?>">CTA Image Alt:</label> 
+  <label for="<?=$this->get_field_id( 'image_alt' )?>">CTA Image Alt:</label>
   <input class="widefat" id="<?=$this->get_field_id( 'image_alt' )?>" name="<?=
     $this->get_field_name( 'image_alt' )?>" type="text" value="<?php
       echo esc_attr( $image_alt ); ?>">
 </p>
 <p>
-  <label for="<?=$this->get_field_id( 'title' )?>">CTA Action Text:</label> 
+  <label for="<?=$this->get_field_id( 'title' )?>">CTA Action Text:</label>
   <input class="widefat" id="<?=$this->get_field_id( 'title' )?>" name="<?=
     $this->get_field_name( 'title' )?>" type="text" value="<?php
       echo esc_attr( $title ); ?>">
 </p>
 <p>
-  <label for="<?=$this->get_field_id( 'link' )?>">CTA Action Link:</label> 
+  <label for="<?=$this->get_field_id( 'link' )?>">CTA Action Link:</label>
   <input class="widefat" id="<?=$this->get_field_id( 'link' )?>" name="<?=
     $this->get_field_name( 'link' )?>" type="text" value="<?php
       echo esc_attr( $link ); ?>" placeholder="https://">
 </p>
 <p>
-  <label for="<?=$this->get_field_id( 'class' )?>">Additional CSS Class(es)</label> 
+  <label for="<?=$this->get_field_id( 'class' )?>">Additional CSS Class(es)</label>
   <input class="widefat" id="<?php echo $this->get_field_id( 'class' ); ?>" name="<?=
     $this->get_field_name( 'class' )?>" type="text" value="<?php
       echo esc_attr( $class ); ?>">
@@ -131,16 +131,16 @@ class FH_Callout extends WP_Widget {
 
 <?php
   }
-      
+
 
   // Widget Backend - Save changes
   public function update( $new_instance, $old_instance )
   {
     $instance = array();
     $instance['image_uri'] = ( ! empty( $new_instance['image_uri'] ) )
-      ? strip_tags( $new_instance['image_uri'] ) : '';    
+      ? strip_tags( $new_instance['image_uri'] ) : '';
     $instance['image_alt'] = ( ! empty( $new_instance['image_alt'] ) )
-      ? strip_tags( $new_instance['image_alt'] ) : '';    
+      ? strip_tags( $new_instance['image_alt'] ) : '';
     $instance['title'] = ( ! empty( $new_instance['title'] ) )
       ? strip_tags( $new_instance['title'] ) : '';
     $instance['link'] = ( ! empty( $new_instance['link'] ) )
@@ -149,7 +149,7 @@ class FH_Callout extends WP_Widget {
       ? strip_tags( $new_instance['class'] ) : '';
     return $instance;
   }
- 
+
 
 }
 // end: FH_Callout

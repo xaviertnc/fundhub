@@ -2,7 +2,7 @@
 
 
 // Disable scaled image sizes
-// add_filter('big_image_size_threshold', '__return_false');  
+// add_filter('big_image_size_threshold', '__return_false');
 
 
 function fh_disable_image_sizes($sizes)

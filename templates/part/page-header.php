@@ -18,7 +18,7 @@
 
 <?php dynamic_sidebar('sidebar-header'); ?>
 
-    <!-- /header widgets -->    
+    <!-- /header widgets -->
   </div>
 </header>
 <!-- /Page Header -->

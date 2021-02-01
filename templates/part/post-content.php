@@ -13,7 +13,7 @@
       </div>
     </div>
   </header>
-  <!-- /Post Header -->    
+  <!-- /Post Header -->
 <?php
   $more_link_text = null; $strip_teaser = null;
   $content = get_the_content( $more_link_text, $strip_teaser );

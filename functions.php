@@ -1,14 +1,14 @@
 <?php
 /**
  * functions.php
- * 
+ *
  * Theme: FUNDHUB
  * Author: Neels Moller
  * Version 1.0.0
- * 
+ *
  * Created: November 2020
  * Last Update: January 2021
- * 
+ *
  */
 
 if ( ! defined( 'UPLOADS' ) )
@@ -20,7 +20,7 @@ define( 'IS_ADMIN'  , is_admin() );
 
 define( 'SITE_URL'  , site_url() );
 define( 'SITE_NAME' , get_bloginfo( 'name' ) );
-define( 'TAGLINE'   , get_bloginfo( 'description' ) ); 
+define( 'TAGLINE'   , get_bloginfo( 'description' ) );
 
 define( 'THEME_DIR' , get_template_directory() );
 define( 'THEME_URI' , get_template_directory_uri() );
@@ -50,7 +50,7 @@ function fh_after_setup_theme()
   add_theme_support( 'html5' );
   add_theme_support( 'align-wide' );
   add_theme_support( 'post-thumbnails' );
-  add_theme_support( 'customize-selective-refresh-widgets' );  
+  add_theme_support( 'customize-selective-refresh-widgets' );
   add_theme_support( 'custom-logo', array( 'flex-width' => true ) );
 }
 
@@ -61,7 +61,7 @@ if ( IS_ADMIN )
 {
     include FH_INCLUDES . '/admin/fh_admin_tools.php';
     include FH_INCLUDES . '/admin/fh_admin_tools_export-theme.php';
-    
+
     include FH_INCLUDES . '/admin/fh_admin_setup_dashboard.php';
     include FH_INCLUDES . '/admin/fh_admin_setup_customizer.php';
     include FH_INCLUDES . '/admin/fh_admin_setup_image-sizes.php';
@@ -71,7 +71,7 @@ if ( IS_ADMIN )
 
     include FH_INCLUDES . '/admin/fh_admin_ajax_media-page.php';
 
-    
+
     // Enqueue Gutenberg editor assets ( backend )
     function fh_enqueue_block_editor_assets()
     {
@@ -89,10 +89,10 @@ if ( IS_ADMIN )
         true
       );
     }
-    
+
     add_action( 'enqueue_block_editor_assets', 'fh_enqueue_block_editor_assets' );
-    
-    
+
+
     // Enqueue backend scripts
     function fh_admin_enqueue_scripts( $page )
     {
@@ -117,30 +117,30 @@ if ( IS_ADMIN )
       }
     //   elseif ( $page == 'edit.php' )
     //   {
-    //      wp_enqueue_script( 'fundhub_admin', 
+    //      wp_enqueue_script( 'fundhub_admin',
     //       FH_ASSETS . '/js/fh_admin.js',
     //       array(),
     //       '1.0.0',
     //       true
-    //     ); 
+    //     );
     //   }
     }
-    
+
     add_action( 'admin_enqueue_scripts', 'fh_admin_enqueue_scripts', 10 );
-        
-        
+
+
     // Enqueue backend styles
     function fh_admin_enqueue_styles( $page )
     {
       if ( $page == 'edit.php' ) // && ( $_GET['post_type'] == 'asset_manager' )
-      {    
+      {
         wp_register_style( 'fundhub_admin_list-page',
           FH_ASSETS . '/css/fh_admin_list-page.css',
           array(),
           '1.0.0',
           'all'
         );
-        wp_enqueue_style( 'fundhub_admin_list-page' );    
+        wp_enqueue_style( 'fundhub_admin_list-page' );
       }
       elseif ( $page == 'upload.php' )
       {
@@ -153,15 +153,15 @@ if ( IS_ADMIN )
         wp_enqueue_style( 'fundhub_admin_media-page' );
       }
     }
-    
+
     add_action( 'admin_enqueue_scripts', 'fh_admin_enqueue_styles' );
 }
 else /* IS_FRONT */
 {
     include FH_INCLUDES . '/fh_render_dynamic-blocks.php';
     include FH_INCLUDES . '/fh_render_shortcode_multisite-post.php';
-    
-    
+
+
     function fh_enqueue_scripts()
     {
       wp_deregister_script( 'wp-embed' );
@@ -173,10 +173,10 @@ else /* IS_FRONT */
       );
       wp_enqueue_script( 'fundhub' );
     }
-    
+
     add_action( 'wp_enqueue_scripts', 'fh_enqueue_scripts' );
-    
-    
+
+
     // Enqueue front-end styles
     function fh_enqueue_styles()
     {
@@ -196,7 +196,7 @@ else /* IS_FRONT */
       wp_enqueue_style( 'fundhub' );
       wp_enqueue_style( 'fundhub_ui_blocks' );
     }
-    
+
     add_action( 'wp_enqueue_scripts', 'fh_enqueue_styles' );
 }
 

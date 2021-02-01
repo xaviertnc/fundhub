@@ -1,7 +1,7 @@
 <?php
 /**
  * The site footer template file
- * 
+ *
  * Theme: FUNDHUB
  * Author: Neels Moller
  * Version: 1.0.0
@@ -14,11 +14,11 @@
 <!-- Site Footer Widgets -->
 <?php dynamic_sidebar('sidebar-site-footer'); ?>
 
-<!-- /Site Footer Widgets -->    
+<!-- /Site Footer Widgets -->
 
 <!-- Site Footer White Section -->
 <section class="site-footer-white">
-    
+
 <!-- Site Footer Content Container -->
 <div class="container" role="presentation">
 
@@ -30,11 +30,11 @@
 <nav id="secondary-nav">
 
 <?php wp_nav_menu( array(
-        
+
     'theme_location' => 'secondary',
     'link_before' => '<span role="presentation">',
     'link_after' => '</span>'
-        
+
 ) ); ?>
 
 

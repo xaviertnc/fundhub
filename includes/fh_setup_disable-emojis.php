@@ -13,7 +13,7 @@ function fh_disable_emojis() {
     remove_action( 'wp_head', 'rest_output_link_wp_head', 10 );
     remove_action( 'wp_head', 'wp_oembed_add_discovery_links', 10 );
     remove_action( 'template_redirect', 'rest_output_link_header', 11, 0 );
-    
+
     // Let's remove a bunch of actions & filters.
     remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
     remove_action( 'admin_print_scripts', 'print_emoji_detection_script' );
@@ -22,7 +22,7 @@ function fh_disable_emojis() {
     remove_filter( 'the_content_feed', 'wp_staticize_emoji' );
     remove_filter( 'comment_text_rss', 'wp_staticize_emoji' );
     remove_filter( 'wp_mail', 'wp_staticize_emoji_for_email' );
-    
+
     // We also take care of Tiny MCE.
     add_filter( 'tiny_mce_plugins', 'fh_disable_emojis_tinymce' );
     add_filter( 'wp_resource_hints', 'fh_disable_emojis_remove_dns_prefetch', 10, 2 );
@@ -58,7 +58,7 @@ function fh_disable_emojis_remove_dns_prefetch( $urls, $relation_type )
     //     $urls = array_diff( $urls, array( $emoji_svg_url ) );
     // }
     // return $urls;
-    
+
     if ( 'dns-prefetch' === $relation_type ) {
 		$result = array();
 		foreach ( $urls as $url )
@@ -71,5 +71,5 @@ function fh_disable_emojis_remove_dns_prefetch( $urls, $relation_type )
 		return $result;
     }
 
-    return $urls;    
+    return $urls;
 }

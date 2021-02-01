@@ -94,31 +94,31 @@ BACKEND
 
   Post / Page Editor
   ------------------
-  
+
     1. Fund Hub specific colors
     2. Wider editor container
 
- 
+
   Sample Content
   --------------
-  
-  
+
+
   Plugins
   -------
-    
+
     Post Duplictor
-  
-  
+
+
   Tools
   -----
-  
+
     Export Site
     Export Posts
     Export Pages
     Export Menus
     Export Widgets
     Export Asset Managers
-    
+
     Import Site
     Import Posts
     Import Pages
@@ -128,6 +128,6 @@ BACKEND
 
     Export Database
     Import Database
-    
+
     Convert to Multi-site
     Convert to Single-site

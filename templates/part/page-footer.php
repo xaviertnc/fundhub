@@ -1,7 +1,7 @@
 <?php
 /**
  * The page footer template file
- * 
+ *
  * Theme: FUNDHUB
  * Author: Neels Moller
  * Version: 1.0.0
@@ -17,7 +17,7 @@
   <!-- page footer widgets -->
 <?php dynamic_sidebar('sidebar-page-footer'); ?>
 
-  <!-- /page footer widgets -->    
+  <!-- /page footer widgets -->
 
   </div>
   <!-- /page footer container -->

@@ -1,28 +1,28 @@
 <?php
 /**
  * fh-widget-logos-grid.php
- * 
+ *
  * Fund Hub Logos Grid Widget
- * 
+ *
  * Theme: FUNDHUB
  * Author: Neels Moller
  * Version 1.0.0
- * 
+ *
  */
 class FH_Logos_Grid extends WP_Widget {
-  
+
   public function __construct()
   {
     parent::__construct(
-  
-      // Base ID of your widget
-      'fh_logos_grid', 
-  
-      // Widget name will appear in UI
-      __('FundHub: Logos Grid', 'fundhub'), 
 
-      array( 'description' => 
-        __( 'Display post-type featured images in a grid', 'fundhub' ) ) 
+      // Base ID of your widget
+      'fh_logos_grid',
+
+      // Widget name will appear in UI
+      __('FundHub: Logos Grid', 'fundhub'),
+
+      array( 'description' =>
+        __( 'Display post-type featured images in a grid', 'fundhub' ) )
     );
   }
 
@@ -31,8 +31,8 @@ class FH_Logos_Grid extends WP_Widget {
   public function render_logos_grid( $post_type = 'post' )
   {
     $posts = get_posts( array(
-      'post_status' => 'publish', 
-      'orderby' => array( 'menu_order' => 'ASC', 'post_title' => 'ASC' ), 
+      'post_status' => 'publish',
+      'orderby' => array( 'menu_order' => 'ASC', 'post_title' => 'ASC' ),
       'post_type' => $post_type,
       'posts_per_page'  => -1
     ) );
@@ -112,7 +112,7 @@ class FH_Logos_Grid extends WP_Widget {
     $post_types = get_post_types( array( 'public' => true ) );
 ?>
 <p>
-  <label for="<?=$this->get_field_id( 'post_type' )?>">Post Type</label> 
+  <label for="<?=$this->get_field_id( 'post_type' )?>">Post Type</label>
   <select class="widefat" id="<?php echo $this->get_field_id( 'post_type' ); ?>"
     name="<?=$this->get_field_name( 'post_type' )?>">
 <?php foreach( $post_types as $value => $label ): ?>
@@ -122,12 +122,12 @@ class FH_Logos_Grid extends WP_Widget {
   </select>
 </p>
 <p>
-  <label for="<?=$this->get_field_id( 'classes' )?>">Additional CSS Class(es)</label> 
+  <label for="<?=$this->get_field_id( 'classes' )?>">Additional CSS Class(es)</label>
   <input class="widefat" id="<?php echo $this->get_field_id( 'classes' ); ?>" name="<?=
     $this->get_field_name( 'classes' )?>" type="text" value="<?php
       echo esc_attr( $classes ); ?>">
 </p>
-<?php 
+<?php
   }
 
 
@@ -138,9 +138,9 @@ class FH_Logos_Grid extends WP_Widget {
     $instance['post_type'] = ( ! empty( $new_instance['post_type'] ) )
       ? strip_tags( $new_instance['post_type'] ) : '';
     $instance['classes'] = ( ! empty( $new_instance['classes'] ) )
-      ? strip_tags( $new_instance['classes'] ) : '';      
+      ? strip_tags( $new_instance['classes'] ) : '';
     return $instance;
   }
- 
+
 }
 // end: FH_Logos_Grid

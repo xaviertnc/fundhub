@@ -1,7 +1,7 @@
 <?php
 /**
  * The site header template file
- * 
+ *
  * Theme: FUNDHUB
  * Author: Neels Moller
  * Version: 1.0.0
@@ -56,11 +56,11 @@
 <nav id="primary-nav">
 
 <?php wp_nav_menu( array(
-        
+
     'theme_location' => 'primary',
     'link_before' => '<span role="presentation">',
     'link_after' => '</span>'
-        
+
 ) ); ?>
 
 
@@ -69,7 +69,7 @@
 
 <!-- Mobile Nav -->
 <label id="toggle-nav-btn" for="toggle-nav-check" aria-label="Toggle Mobile Nav">
-  <!-- &#9776; hamburger icon -->    
+  <!-- &#9776; hamburger icon -->
   <hr class="line1"><hr class="line2"><hr class="line3">
 </label>
 <!-- /Mobile Nav -->

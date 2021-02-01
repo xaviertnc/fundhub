@@ -9,7 +9,7 @@ function fh_render_asm_strategies_tagcloud()
   $html = '<ul class="post-strategies-block">';
   foreach( $strategies ?: [] as $strategy )
   {
-    $html .= '<li><a href="strategies/#' . $strategy->name . '">' . 
+    $html .= '<li><a href="strategies/#' . $strategy->name . '">' .
       $strategy->name . '</a></li>';
   }
   return $html . '</ul>' . PHP_EOL;
@@ -26,7 +26,7 @@ function fh_render_strategies_page_content()
   $html = '<ul class="strategies-block">';
   foreach( $strategies ?: [] as $strategy )
   {
-    $html .= '<li><a href="#' . $strategy->name . '">' . 
+    $html .= '<li><a href="#' . $strategy->name . '">' .
       $strategy->name . '</a></li>';
   }
   if( ! $strategies ) { $html .= '<li>...</li>'; }
@@ -45,14 +45,14 @@ function fh_render_strategies_page_content()
           'terms' => $strategy->term_id,
           'field' => 'term_id'
          ),
-      ),  
+      ),
     );
     $post_tags_html = '';
     $posts = get_posts( $args );
     foreach ( $posts as $post )
     {
-      $post_tags_html .= '<li class="grid-item"><a href="' . 
-        esc_url( get_permalink( $post ) ) . '" title="' . $post->post_title . 
+      $post_tags_html .= '<li class="grid-item"><a href="' .
+        esc_url( get_permalink( $post ) ) . '" title="' . $post->post_title .
           '">' . get_the_post_thumbnail( $post->ID, 'full' ) . '</a></li>';
     }
     $html .= '<div class="strategy-block">' .

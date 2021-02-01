@@ -35,7 +35,7 @@ function fh_widgets_init()
 	  'id'            => 'sidebar-site-footer',
 	  'description'   => __( 'Add site footer widget(s) here.', 'fundhub' ),
 	  'before_sidebar' => '<div class="widget-area" role="complementary" aria-label="Site Footer Bar">' . PHP_EOL,
-	  'after_sidebar'  => PHP_EOL . '</div>',	  
+	  'after_sidebar'  => PHP_EOL . '</div>',
 	  'before_widget' => '<section id="%1$s" class="widget %2$s">' . PHP_EOL . PHP_EOL,
 	  'after_widget'  => PHP_EOL . PHP_EOL . '</section>'
 	)

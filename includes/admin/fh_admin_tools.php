@@ -82,8 +82,8 @@ function fh_get_post_type( $post_type = 'post', $status = null, $parent = null, 
     'post_status' => $status, // null => any status
     'post_parent' => $parent, // null => any parent
     'numberposts' => $limit,
-  ); 
-  $posts = get_posts( $args );   
+  );
+  $posts = get_posts( $args );
   return $posts;
 }
 
@@ -117,11 +117,11 @@ function fh_get_attachment_id( $file_href )
 {
   global $wpdb;
   $sql = "SELECT `post_id` FROM {$wpdb->postmeta}
-    WHERE `meta_key` = '_wp_attached_file' AND 
+    WHERE `meta_key` = '_wp_attached_file' AND
       `meta_value` = '{$file_href}'";
-  //echo '<pre>sql: ', print_r( $sql, true ), '</pre>';  
+  //echo '<pre>sql: ', print_r( $sql, true ), '</pre>';
   $results = $wpdb->get_results( $sql );
-  //echo '<pre>results: ', print_r( $results, true ), '</pre>';  
+  //echo '<pre>results: ', print_r( $results, true ), '</pre>';
   foreach ( $results?:[] as $result )
   {
     return $result->post_id;

@@ -46,7 +46,7 @@ function pre_get_posts( $query )
 {
   if ($query->get( 'post_type' ) == 'asset_manager') {
     if ($query->get( 'orderby' ) == '') {
-      $query->set( 'orderby', array( 
+      $query->set( 'orderby', array(
         'menu_order' => 'ASC' ,
         'post_title' => 'ASC'
       ) );
