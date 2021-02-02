@@ -1,8 +1,5 @@
 <?php  /* FUND HUB Theme Customizer Setup */
 
-echo 'Hi, Bye!<br>';
-
-// die;
 
 function fh_customize_register( $wp_customize )
 {

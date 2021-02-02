@@ -54,8 +54,8 @@ function fh_action_wp_reset()
   $wpdb->query( $query );
 
   // restore rest of the settings
-  update_option( 'siteurl', $siteurl );
-  update_option( 'home', $home );
+  update_option( 'siteurl', $siteurl, true );
+  update_option( 'home', $home, true );
 
   // remove password nag
   if ( get_user_meta( $user_id, 'default_password_nag' ) )
@@ -68,7 +68,7 @@ function fh_action_wp_reset()
   }
 
   // delete all default pages, posts & comments
-  if ( ! empty( $_POST[ 'clear_data' ] ) )
+  if ( ! empty( $_POST[ 'clear_content' ] ) )
   {
     $tables = array( $wpdb->postmeta, $wpdb->posts, $wpdb->comments );
     foreach ( $tables as $table )
@@ -90,6 +90,10 @@ function fh_action_wp_reset()
   if ( ! empty( $_POST[ 'keep_theme' ] ) )
   {
     switch_theme( $active_theme->get_stylesheet() );
+    // set theme default options
+    update_option( 'permalink_structure', '/%category%/%postname%/', true );
+    update_option( 'uploads_use_yearmonth_folders', 0, true );
+    update_option( 'upload_path', 'media', true );
   }
 
   // log out and log in
