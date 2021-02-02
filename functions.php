@@ -11,10 +11,10 @@
  *
  */
 
-if ( ! defined( 'UPLOADS' ) )
-{
-  define( 'UPLOADS', 'media' );
-}
+// if ( ! defined( 'UPLOADS' ) )
+// {
+//   define( 'UPLOADS', 'media' );
+// }
 
 define( 'IS_ADMIN'  , is_admin() );
 
@@ -31,6 +31,7 @@ define( 'FH_INCLUDES', THEME_DIR . '/includes' );
 
 include FH_INCLUDES . '/fh_setup_custom-post-types.php';
 include FH_INCLUDES . '/fh_setup_disable-emojis.php';
+include FH_INCLUDES . '/fh_setup_customizer.php';
 include FH_INCLUDES . '/fh_setup_widgets.php';
 
 include FH_INCLUDES . '/widgets/fh_widget_logos-grid.php';
@@ -60,7 +61,6 @@ add_action( 'after_setup_theme', 'fh_after_setup_theme', 10 );
 if ( IS_ADMIN )
 {
     include FH_INCLUDES . '/admin/fh_admin_setup_dashboard.php';
-    include FH_INCLUDES . '/admin/fh_admin_setup_customizer.php';
     include FH_INCLUDES . '/admin/fh_admin_setup_image-sizes.php';
     include FH_INCLUDES . '/admin/fh_admin_setup_default-content.php';
     include FH_INCLUDES . '/admin/fh_admin_setup_posts-list-page.php';
