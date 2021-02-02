@@ -27,7 +27,7 @@ get_header(); ?>
 <!-- /content left -->
 
 <!-- content right -->
-<?php dynamic_sidebar('sidebar-main'); ?>  
+<?php dynamic_sidebar('sidebar-main'); ?>
 <!-- /content right -->
 
 </div>
@@ -37,7 +37,7 @@ get_header(); ?>
 <!-- /Page Content -->
 
 <?php // get_template_part( 'templates/part/page-footer' ); ?>
-    
+
 </section>
 <!-- /SITE CONTENT -->
 

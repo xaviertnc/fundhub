@@ -45,9 +45,8 @@
 <span class="screen-reader-text">Welcome to <?=SITE_NAME?></span>
 <small class="screen-reader-text"><?=TAGLINE?></small>
 <?php if ( has_custom_logo() ) : the_custom_logo(); else : ?>
-<a href="<?=SITE_URL?>/" rel="home" aria-current="page">
-  <img src="<?=FH_ASSETS?>/img/fundhub/logo.png" alt="Company Logo" height="70">
-</a><?php endif; ?>
+<a href="<?=SITE_URL?>/" rel="home" aria-current="page">Company Logo</a>
+<?php endif; ?>
 </div>
 <!-- /Site Brand -->
 

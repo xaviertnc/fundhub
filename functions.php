@@ -59,15 +59,17 @@ add_action( 'after_setup_theme', 'fh_after_setup_theme', 10 );
 
 if ( IS_ADMIN )
 {
-    include FH_INCLUDES . '/admin/fh_admin_tools.php';
-    include FH_INCLUDES . '/admin/fh_admin_tools_export-theme.php';
-
     include FH_INCLUDES . '/admin/fh_admin_setup_dashboard.php';
     include FH_INCLUDES . '/admin/fh_admin_setup_customizer.php';
     include FH_INCLUDES . '/admin/fh_admin_setup_image-sizes.php';
     include FH_INCLUDES . '/admin/fh_admin_setup_default-content.php';
     include FH_INCLUDES . '/admin/fh_admin_setup_posts-list-page.php';
-    include FH_INCLUDES . '/admin/fh_admin_setup_theme-options-page.php';
+    include FH_INCLUDES . '/admin/fh_admin_setup_theme-tools-page.php';
+
+    include FH_INCLUDES . '/admin/fh_admin_helper-functions.php';
+
+    include FH_INCLUDES . '/admin/fh_admin_tools_export-data.php';
+    include FH_INCLUDES . '/admin/fh_admin_tools_wp-reset.php';
 
     include FH_INCLUDES . '/admin/fh_admin_ajax_media-page.php';
 

@@ -188,15 +188,15 @@ function fh_get_other_media( $post_content_files = null )
 }
 
 
-function fh_action_export()
+function fh_action_export_data()
 {
-  check_admin_referer( 'fh-nonce' );
+  check_admin_referer( 'fh_nonce' );
 
   //echo '<pre>REQUEST: ', print_r( $_REQUEST, true ), '</pre>';
   echo '<pre>SITE_URL: ', print_r( SITE_URL, true ), '</pre>';
   echo '<pre>UPLOADS: ', print_r( UPLOADS, true ), '</pre>';
 
-  $export_basedir = THEME_DIR . '/export';
+  $export_basedir = THEME_DIR . '/content/export';
 
   // Get categories
   $category_terms = fh_get_taxonomy_terms( 'category' );
@@ -389,4 +389,4 @@ function fh_action_export()
 
 }
 
-add_action( 'admin_post_fh_export', 'fh_action_export' );
+add_action( 'admin_post_fh_export_data', 'fh_action_export_data' );

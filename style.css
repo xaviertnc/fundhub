@@ -341,7 +341,7 @@ img {
 /* loading indicator */
 
 .loading-indicator {
-  background: white url('assets/img/loader.gif') no-repeat center;
+  background: white url('assets/images/loader.gif') no-repeat center;
   border-radius: 3px;
   box-shadow: 0 0 20px 0 rgba(0,0,0,0.15);
   display: none;
@@ -493,8 +493,6 @@ img {
 /*}*/
 
 .cta-goto-website {
-  background: black url('assets/img/blackonyx/bg1024x576.jpg') no-repeat center;
-  background-size: cover;
   padding: 2em 1em 3em;
   width: 100%;
   text-align: center;
@@ -640,7 +638,7 @@ img {
 }
 
 .fancy-list > li:before {
-  background: url('assets/img/fancy-check.png') no-repeat;
+  background: url('assets/images/fancy-check.png') no-repeat;
   content: '';
   float: left;
   height: 42px;
@@ -1110,7 +1108,7 @@ img {
 /* Page Header */
 
 #page-header {
-  background: url('assets/img/blackonyx/bg.jpg') center center;
+  /*background: url('assets/images/blackonyx/bg.jpg') center center;*/
   background-color: black;
   background-size: cover;
   padding-top: 110px;

@@ -29,7 +29,7 @@ get_header();?>
 <?php endwhile; ?>
 <?php if ( $i == 0 ): ?>
 
-  <p>* No Content *</p>'
+  <p>* Index - No Content *</p>
 
 <?php endif; ?>
 </div>
