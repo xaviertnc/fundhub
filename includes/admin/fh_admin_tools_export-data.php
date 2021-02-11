@@ -1,16 +1,17 @@
 <?php
 
-class FH_Export_Content {
+class FH_Export_Data {
+
+  public $site_url = '';
+  public $theme_dir = '';
+  public $export_path = 'content/export';
 
 
-  public $uploads_url = 'media';
-  public $exports_path = 'content/export';
-
-
-  function __construct( $exports_path = null, $uploads_path = null )
+  function __construct( $site_url, $theme_dir, $export_path = null )
   {
-    if ( isset( $exports_path ) ) { $exports_path = $exports_path; }
-    if ( isset( $uploads_path ) ) { $uploads_path = $uploads_path; }
+    $this->site_url = $site_url;
+    $this->theme_dir = $theme_dir;
+    if ( isset( $export_path ) ) { $export_path = $export_path; }
     add_action( 'admin_post_fh_export_data', array( $this, 'export_all' ) );
   }
 
@@ -65,7 +66,7 @@ class FH_Export_Content {
   }
 
 
-  function map_attachments( $attachments )
+  function map_post_attachments( $attachments )
   {
     $export = array();
     foreach ( $attachments as $attachment )
@@ -88,7 +89,7 @@ class FH_Export_Content {
   }
 
 
-  function map_page( $page )
+  function map_post( $page )
   {
     $export_item = new stdClass();
     $export_item->post_id = $page->ID;
@@ -100,7 +101,7 @@ class FH_Export_Content {
     $export_item->post_name = $page->post_name;
     $export_item->post_title = $page->post_title;
     $export_item->post_metas = $page->post_metas;
-    $export_item->post_content_files = $page->post_content_files;
+    $export_item->post_files = $page->post_files;
     $export_item->post_attachments = $page->post_attachments;
     $export_item->other_attachments = $page->other_attachments;
     $export_item->menu_order = $page->menu_order;
@@ -109,60 +110,99 @@ class FH_Export_Content {
   }
 
 
+  function get_unattached_media( $post_files = null )
+  {
+    $attachments = array();
+    $other_attachment_ids = array();
+
+    echo '<pre>post_files: ',
+      print_r( $post_files, true ), '</pre>';
+
+    if ( empty( $post_files ) ) { return $attachments; }
+    foreach ( $post_files as $file )
+    {
+      if ( $file->is_media_item and ! $file->is_attached_to_post )
+      {
+        $other_attachment_ids[] = $file->wp_attachment_id;
+      }
+    }
+    if ( $other_attachment_ids )
+    {
+      $args = array(
+        'post_type' => 'attachment',
+        'post__in' => $other_attachment_ids
+      );
+      $attachments = get_posts( $args );
+
+      //echo '<pre>attachments: ', print_r( $attachments, true ), '</pre>';
+
+    }
+    return $attachments;
+  }
+
+
   /**
-   * Cycle through each file HREF found inside $post_content
+   * Cycle through each file HREF found inside $post->post_content
    * and determine if it's a local or external file href.
    * Also check if the href points inside the WP media library
    * and find its matching attachment post and ID if possible.
    *
    * PS: Duplicate HREFS are removed before processing.
    */
-  function extract_files_from_content( $post_content, $post_attachments )
+  function extract_files_from_content( $post, $uploads_info )
   {
     $results = array();
+
     $regex = '/(?:src|href)="([^"]*\.(?:jpg|png|gif|pdf))"/i';
-    preg_match_all( $regex, $post_content, $matches );
+    preg_match_all( $regex, $post->post_content, $matches );
+
     if ( ! empty( $matches[1] ) )
     {
-      $raw_file_hrefs = array();
+      $unique_hrefs = array();
+
       // Get raw hrefs while preventing duplicates
       foreach ( $matches[1] as $raw_file_href )
       {
-        if ( !  in_array( $raw_file_href, $raw_file_hrefs ) )
+        if ( !  in_array( $raw_file_href, $unique_hrefs ) )
         {
-          $raw_file_hrefs[] = $raw_file_href;
+          $unique_hrefs[] = $raw_file_href;
         }
       }
-      // Process unique hrefs and add them to $results
-      foreach ( $raw_file_hrefs as $raw_file_href )
+
+      foreach ( $unique_hrefs as $raw_file_href )
       {
-        //echo '<pre>raw_file_href: ', print_r( $raw_file_href, true ), '</pre>';
         $pos_http = strpos( $raw_file_href, 'http' );
-        //echo '<pre>SITE_URL: ', print_r( SITE_URL, true ), '</pre>';
-        //echo '<pre>pos_http: ', print_r( $pos_http, true ), '</pre>';
-        $pos_siteurl = strpos( $raw_file_href, SITE_URL );
-        //echo '<pre>pos_siteurl: ', print_r( $pos_siteurl, true ), '</pre>';
+        $pos_siteurl = strpos( $raw_file_href, $this->site_url );
         $is_external = ( ( $pos_http !== FALSE ) and ( $pos_siteurl === FALSE ) );
-        //echo '<pre>is_external: ', print_r( $is_external, true ), '</pre>';
+
         $file_href = $raw_file_href;
         $wp_post_attachment = null;
         $wp_attachment_id = null;
         $is_media_item = false;
+
+        // ( WP_CONTENT_DIR )
         if ( ! $is_external )
         {
-          $uploads_path = $pos_http === FALSE ? UPLOADS : SITE_URL .'/' . UPLOADS;
-          if ( $uploads_path ) { $uploads_path .= '/'; }
-          //echo '<pre>uploads_path: ', print_r( $uploads_path, true ), '</pre>';
-          $is_media_item = ( UPLOADS and strpos( $raw_file_href, $uploads_path ) !== FALSE );
+          $uploads_href = ( $pos_http === FALSE ) ? $uploads_info[ 'uploads' ]
+            : $uploads_info[ 'baseurl' ];
+
+          if ( $uploads_href )
+          {
+            $uploads_href = trailingslashit( $uploads_href );
+          }
+
+          $is_media_item = ( $uploads_href and
+            strpos( $raw_file_href, $uploads_href ) !== FALSE );
+
           if ( $is_media_item )
           {
-            $file_href = str_replace( $uploads_path, '', $raw_file_href );
-            //echo '<pre>file_href: ', print_r( $file_href, true ), '</pre>';
+            $file_href = str_replace( $uploads_href, '', $raw_file_href );
             $wp_attachment_id = fh_get_attachment_id( $file_href );
-            $wp_post_attachment = fh_find_object_by( $post_attachments,
+            $wp_post_attachment = fh_find_object_by( $post->post_attachments,
               'post_id', $wp_attachment_id ) ? 1 : 0;
           }
         }
+
         $result = new stdClass();
         $result->file = $file_href;
         $result->is_external = $is_external ? 1 : 0;
@@ -176,232 +216,153 @@ class FH_Export_Content {
   }
 
 
-  function get_unattached_media( $post_content_files = null )
+  function export_taxonomy( $taxonomy, $taxonomy_basedir )
   {
-    $attachments = array();
-    $other_attachment_ids = array();
-    echo '<pre>post_content_files: ', print_r( $post_content_files, true ), '</pre>';
-    if ( empty( $post_content_files ) ) { return $attachments; }
-    foreach ( $post_content_files as $file )
+    $taxonomy_terms = fh_get_taxonomy_terms( $taxonomy );
+    $taxonomy_terms = $this->map_terms( $taxonomy_terms );
+    $taxonomy_terms = fh_sort_objects_by( $taxonomy_terms, 'name' );
+    if ( fh_create_folder( $taxonomy_basedir ) )
     {
-      if ( $file->is_media_item and ! $file->is_attached_to_post )
-      {
-        $other_attachment_ids[] = $file->wp_attachment_id;
-      }
+      $file_path = $taxonomy_basedir . '/' . $taxonomy . '.json';
+      fh_save_as_json( $file_path, $taxonomy_terms );
     }
-    //echo '<pre>shared_attachment_ids: ', print_r( $other_attachment_ids, true ), '</pre>';
-    if ( $other_attachment_ids )
-    {
-      $args = array(
-        'post_type' => 'attachment',
-        'post__in' => $other_attachment_ids
-      );
-      $attachments = get_posts( $args );
-      //echo '<pre>attachments: ', print_r( $attachments, true ), '</pre>';
-    }
-    return $attachments;
   }
 
 
-  function export_all()
+  function export_nav_menus( $nav_menus_basedir )
   {
-    check_admin_referer( 'fh_nonce' );
-
-    //echo '<pre>REQUEST: ', print_r( $_REQUEST, true ), '</pre>';
-    echo '<pre>SITE_URL: ', print_r( SITE_URL, true ), '</pre>';
-    echo '<pre>UPLOADS: ', print_r( UPLOADS, true ), '</pre>';
-
-    $export_basedir = THEME_DIR . '/content/export';
-
-    // Get categories
-    $category_terms = fh_get_taxonomy_terms( 'category' );
-    // Prepare categories for export
-    $category_terms = $this->map_terms( $category_terms );
-    // Sort categories alphabetically
-    $category_terms = fh_sort_objects_by( $category_terms, 'name' );
-    // Create "Categories" folder
-    $categories_basedir = $export_basedir;
-    if ( fh_create_folder( $categories_basedir ) )
-    {
-      fh_save_as_json( $categories_basedir . '/categories.json', $category_terms );
-      //echo '<pre>Categories: ', print_r( $category_terms, true ), '</pre>';
-    }
-
-    // Get strategies
-    $strategy_terms = fh_get_taxonomy_terms( 'strategy' );
-    // Prepare strategies for export
-    $strategy_terms = $this->map_terms( $strategy_terms );
-    // Sort categories alphabetically
-    $strategy_terms = fh_sort_objects_by( $strategy_terms, 'name' );
-    // Create "Categories" folder
-    $strategies_basedir = $export_basedir;
-    if ( fh_create_folder( $strategies_basedir ) )
-    {
-      fh_save_as_json( $strategies_basedir . '/strategies.json', $strategy_terms );
-      //echo '<pre>Strategies: ', print_r( $strategy_terms, true ), '</pre>';
-    }
-
-    // Get Nav Menus
     $nav_menus = array();
     $nav_menu_terms = fh_get_taxonomy_terms( 'nav_menu' );
-    // Sort Menu Terms by Name
     $nav_menu_terms = fh_sort_objects_by( $nav_menu_terms, 'name' );
-    // Get Nav Menu Item Posts
     foreach ( $nav_menu_terms as $nav_menu_term )
     {
       $nav_menu_items = wp_get_nav_menu_items( $nav_menu_term );
       $nav_menu_items = $this->map_menu_items( $nav_menu_items );
       $nav_menus[ $nav_menu_term->name ] = $nav_menu_items;
     }
-    $nav_menus_basedir = $export_basedir;
     if ( fh_create_folder( $nav_menus_basedir ) )
     {
       fh_save_as_json( $nav_menus_basedir . '/navmenus.json', $nav_menus );
-      // echo '<pre>Nav Menus: ', print_r( $nav_menus, true ), '</pre>';
     }
+  }
 
-    // Get Pages
-    $pages_basedir = "{$export_basedir}/pages";
-    $pages = fh_get_post_type( 'page' );
-    if ( $pages and fh_create_folder( $pages_basedir ) )
+
+  function export_post( $post_type, $path )
+  {
+    $posts_basedir = "{$export_basedir}/{$path}";
+    $posts = fh_get_post_type( $post_type );
+    if ( $posts and fh_create_folder( $posts_basedir ) )
     {
-      $pages = fh_sort_objects_by( $pages, 'menu_order', 'numeric' );
-      foreach ( $pages as $page )
+      $posts = fh_sort_objects_by( $posts, 'menu_order', 'numeric' );
+      foreach ( $posts as $post )
       {
-        $page_basedir = "{$pages_basedir}/{$page->post_name}";
-        if ( fh_create_folder( $page_basedir ) )
+        $post_basedir = "{$posts_basedir}/{$post->post_name}";
+
+        if ( ! fh_create_folder( $post_basedir ) ) { continue; }
+
+        fh_save_as_html( $post_basedir . '/content.html', $post->post_content );
+        $post_attachments = fh_get_attached_media( $post );
+        $post_attachments = fh_add_post_metas( $post_attachments );
+        $post->post_attachments = $this->map_post_attachments( $post_attachments );
+        $post->post_files = $this->extract_files_from_content( $post, $uploads_info );
+        $other_attachments = $this->get_unattached_media( $post->post_files );
+        $other_attachments = fh_add_post_metas( $other_attachments );
+        $post->other_attachments = $this->map_post_attachments( $other_attachments );
+        $post->post_metas = get_post_meta( $post->ID );
+        $post->post_metas = fh_filter_post_metas( $post->post_metas );
+        $post = $this->map_post( $post );
+
+        fh_save_as_json( $post_basedir . '/post.json', $post );
+
+        $files_basedir = $post_basedir . '/media';
+        //echo '<pre>files_basedir: ', print_r( $files_basedir, true ), '</pre>';
+
+        if ( fh_create_folder( $files_basedir ) )
         {
-          fh_save_as_html( $page_basedir . '/content.html', $page->post_content );
-          $page->post_attachments = fh_get_attached_media( $page );
-          $page->post_attachments = fh_add_post_metas( $page->post_attachments );
-          $page->post_attachments = $this->map_attachments( $page->post_attachments );
-          $page->post_content_files = $this->extract_files_from_content( $page->post_content, $page->post_attachments );
-          $page->other_attachments = $this->get_unattached_media( $page->post_content_files );
-          $page->other_attachments = fh_add_post_metas( $page->other_attachments );
-          $page->other_attachments = $this->map_attachments( $page->other_attachments );
-          $page->post_metas = get_post_meta( $page->ID );
-          $page->post_metas = fh_filter_post_metas( $page->post_metas );
-          $page = $this->map_page( $page );
-          fh_save_as_json( $page_basedir . '/post.json', $page );
-          echo '<pre>' . $page->post_title . ': ', print_r( $page, true ), '</pre>';
-          $uploads_info = wp_upload_dir();
-          $uploads_baseurl = $uploads_info[ 'baseurl' ];
-          //echo '<pre>uploads_baseurl: ', print_r( $uploads_baseurl, true ), '</pre>';
-          // $uploads_basedir = $uploads_info[ 'basedir' ];
-          $files_basedir = $page_basedir . '/media';
-          //echo '<pre>files_basedir: ', print_r( $files_basedir, true ), '</pre>';
-          if ( fh_create_folder( $files_basedir ) )
+          if ( $post->post_attachments  )
           {
-            if ( $page->post_attachments  )
+            foreach ( $post->post_attachments as $attachment )
             {
-              foreach ( $page->post_attachments as $attachment )
+              $file = reset( $attachment->post_metas[ '_wp_attached_file' ] );
+              //echo '<pre>file: ', print_r( $file, true ), '</pre>';
+              $file_path = dirname( $file );
+              //echo '<pre>file_path: ', print_r( $file_path, true ), '</pre>';
+              $file_dir = $files_basedir . ( ($file_path != '.') ? '/' . $file_path : '' );
+              if ( fh_create_folder( $file_dir ) )
               {
-                $file = reset( $attachment->post_metas[ '_wp_attached_file' ] );
-                //echo '<pre>file: ', print_r( $file, true ), '</pre>';
-                $file_path = dirname( $file );
-                //echo '<pre>file_path: ', print_r( $file_path, true ), '</pre>';
-                $file_dir = $files_basedir . ( ($file_path != '.') ? '/' . $file_path : '' );
-                if ( fh_create_folder( $file_dir ) )
-                {
-                  //echo '<pre>file_dir: ', print_r( $file_dir, true ), '</pre>';
-                  //echo '<pre>from: ', print_r( $uploads_baseurl . '/' . $file, true ), '</pre>';
-                  //echo '<pre>to: ', print_r( $file_dir . '/' . basename( $file ), true ), '</pre>';
-                  fh_copy_file( $uploads_baseurl . '/' . $file, $file_dir );
-                }
+                //echo '<pre>file_dir: ', print_r( $file_dir, true ), '</pre>';
+                //echo '<pre>from: ', print_r( $uploads_baseurl . '/' . $file, true ), '</pre>';
+                //echo '<pre>to: ', print_r( $file_dir . '/' . basename( $file ), true ), '</pre>';
+                fh_copy_file( $uploads_baseurl . '/' . $file, $file_dir );
               }
             }
-            if ( $page->other_attachments  )
+          }
+          if ( $post->other_attachments  )
+          {
+            foreach ( $post->other_attachments as $attachment )
             {
-              foreach ( $page->other_attachments as $attachment )
+              $file = reset( $attachment->post_metas[ '_wp_attached_file' ] );
+              $file_path = dirname( $file );
+              $file_dir = $files_basedir . ( ($file_path != '.') ? '/' . $file_path : '' );
+              if ( fh_create_folder( $file_dir ) )
               {
-                $file = reset( $attachment->post_metas[ '_wp_attached_file' ] );
-                $file_path = dirname( $file );
-                $file_dir = $files_basedir . ( ($file_path != '.') ? '/' . $file_path : '' );
-                if ( fh_create_folder( $file_dir ) )
-                {
-                  fh_copy_file( $uploads_baseurl . '/' . $file, $file_dir );
-                }
+                fh_copy_file( $uploads_baseurl . '/' . $file, $file_dir );
               }
             }
           }
         }
       }
     }
+  }
 
-    // Get Asset Managers
-    $asm_posts_basedir = "{$export_basedir}/asset-manager-posts";
-    $asm_posts = fh_get_post_type( 'asset_manager' );
-    if ( $asm_posts and fh_create_folder( $asm_posts_basedir ) )
-    {
-      $asm_posts = fh_sort_objects_by( $asm_posts, 'menu_order', 'numeric' );
-      foreach ( $asm_posts as $asm )
-      {
-        $asm_basedir = "{$asm_posts_basedir}/{$asm->post_name}";
-        if ( fh_create_folder( $asm_basedir ) )
-        {
-          fh_save_as_html( $asm_basedir . '/content.html', $asm->post_content );
-          $asm->post_attachments = fh_get_attached_media( $asm );
-          $asm->post_attachments = fh_add_post_metas( $asm->post_attachments );
-          $asm->post_attachments = $this->map_attachments( $asm->post_attachments );
-          $asm->post_content_files = $this->extract_files_from_content( $asm->post_content, $asm->post_attachments );
-          $asm->other_attachments = $this->get_unattached_media( $asm->post_content_files );
-          $asm->other_attachments = fh_add_post_metas( $asm->other_attachments );
-          $asm->other_attachments = $this->map_attachments( $asm->other_attachments );
-          $asm->post_metas = get_post_meta( $asm->ID );
-          $asm->post_metas = fh_filter_post_metas( $asm->post_metas );
-          $asm = $this->map_page( $asm );
-          fh_save_as_json( $asm_basedir . '/post.json', $asm );
-          echo '<pre>' . $asm->post_title . ': ', print_r( $asm, true ), '</pre>';
-          $uploads_info = wp_upload_dir();
-          $uploads_baseurl = $uploads_info[ 'baseurl' ];
-          //echo '<pre>uploads_baseurl: ', print_r( $uploads_baseurl, true ), '</pre>';
-          // $uploads_basedir = $uploads_info[ 'basedir' ];
-          $files_basedir = $asm_basedir . '/media';
-          //echo '<pre>files_basedir: ', print_r( $files_basedir, true ), '</pre>';
-          if ( fh_create_folder( $files_basedir ) )
-          {
-            if ( $asm->post_attachments  )
-            {
-              foreach ( $asm->post_attachments as $attachment )
-              {
-                $file = reset( $attachment->post_metas[ '_wp_attached_file' ] );
-                //echo '<pre>file: ', print_r( $file, true ), '</pre>';
-                $file_path = dirname( $file );
-                //echo '<pre>file_path: ', print_r( $file_path, true ), '</pre>';
-                $file_dir = $files_basedir . ( ($file_path != '.') ? '/' . $file_path : '' );
-                if ( fh_create_folder( $file_dir ) )
-                {
-                  //echo '<pre>file_dir: ', print_r( $file_dir, true ), '</pre>';
-                  //echo '<pre>from: ', print_r( $uploads_baseurl . '/' . $file, true ), '</pre>';
-                  //echo '<pre>to: ', print_r( $file_dir . '/' . basename( $file ), true ), '</pre>';
-                  fh_copy_file( $uploads_baseurl . '/' . $file, $file_dir );
-                }
-              }
-            }
-            if ( $asm->other_attachments  )
-            {
-              foreach ( $asm->other_attachments as $attachment )
-              {
-                $file = reset( $attachment->post_metas[ '_wp_attached_file' ] );
-                $file_path = dirname( $file );
-                $file_dir = $files_basedir . ( ($file_path != '.') ? '/' . $file_path : '' );
-                if ( fh_create_folder( $file_dir ) )
-                {
-                  fh_copy_file( $uploads_baseurl . '/' . $file, $file_dir );
-                }
-              }
-            }
-          }
-        }
-      }
-    }
 
-  //   $zip = new ZipArchive;
-  //   $zip->open( THEME_DIR . '/export.zip', ZipArchive::CREATE );
-  //   $files_to_zip = array();
-  //   $zip->addFile( THEME_DIR . '/export' );
-  //   $zip->close();
+  function export_all()
+  {
+    // echo '<pre>REQUEST: ', print_r( $_REQUEST, true ), '</pre>';
+
+    check_admin_referer( 'fh_nonce' );
+
+    echo '<pre>SITE URL: ', print_r( $this->site_url, true ), '</pre>';
+    echo '<pre>THEME DIR: ', print_r( $this->theme_dir, true ), '</pre>';
+    echo '<pre>EXPORT PATH: ', print_r( $this->export_path, true ), '</pre>';
+
+    /* Export Directory */
+    $export_basedir = $this->theme_dir . '/' . $this->export_path . '/';
+    $export_basedir .= time();
+    echo '<pre>EXPORT DIR: ', print_r( $export_basedir, true ), '</pre>';
+
+    /* Uploads Info */
+    $uploads_info = wp_upload_dir();
+    $uploads_baseurl = $uploads_info[ 'baseurl' ];
+    $uploads_info[ 'uploads' ] = untrailingslashit( str_replace(
+        trailingslashit( $this->site_url ), '', $uploads_baseurl ) );
+    echo '<pre>UPLOADS INFO: ', print_r( $uploads_info, true ), '</pre>';
+
+    /* Categories */
+    $this->export_taxonomy( 'category', $export_basedir );
+
+    /* Strategies */
+    $this->export_taxonomy( 'strategy', $export_basedir );
+
+    /* Nav Menus */
+    $this->export_nav_menus( $export_basedir );
+
+    /* Page Posts */
+    $this->export_post( 'page', 'page-posts' );
+
+    /* Asset Manager Posts */
+    $this->export_post( 'asset_manager', 'asm-posts' );
 
   }
 
-} // end: FH_Export_Content
+} // end: FH_Export_Data
+
+
+new FH_Export_Data( SITE_URL, THEME_DIR );
+
+
+//   $zip = new ZipArchive;
+//   $zip->open( THEME_DIR . '/export.zip', ZipArchive::CREATE );
+//   $files_to_zip = array();
+//   $zip->addFile( THEME_DIR . '/export' );
+//   $zip->close();
