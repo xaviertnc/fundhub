@@ -10,10 +10,16 @@
   <input type="hidden" name="action" value="fh_wp_reset">
   <?=submit_button( 'Reset Now !' )?>
 </form>
-<br><br>
+<br>
 <form action="<?=esc_url( admin_url( 'admin-post.php' ) )?>" method="post">
     <?=$nonce_field?>
     <input type="hidden" name="action" value="fh_export_data">
-    <?=submit_button( 'Export Theme Data' )?>
+    <?=submit_button( 'Export Data' )?>
+</form>
+<br>
+<form action="<?=esc_url( admin_url( 'admin-post.php' ) )?>" method="post">
+    <?=$nonce_field?>
+    <input type="hidden" name="action" value="fh_import_data">
+    <?=submit_button( 'Import Data' )?>
 </form>
 </div>
