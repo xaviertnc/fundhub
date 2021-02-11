@@ -147,7 +147,7 @@ class FH_Export_Data {
    * Also check if the href points inside the WP media library
    * and find its matching attachment post and ID if possible.
    *
-   * PS: Duplicate HREFS are removed before processing.
+   * PS: Duplicate HREFS are removed.
    */
   function extract_files_from_content( $post, $uploads_info )
   {
