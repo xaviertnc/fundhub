@@ -11,11 +11,6 @@
  *
  */
 
-// if ( ! defined( 'UPLOADS' ) )
-// {
-//   define( 'UPLOADS', 'media' );
-// }
-
 define( 'IS_ADMIN'  , is_admin() );
 
 define( 'SITE_URL'  , site_url() );
