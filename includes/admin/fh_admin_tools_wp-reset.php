@@ -19,8 +19,7 @@ function fh_action_wp_reset()
 
   // save values that need to be restored after reset
   $blogname = get_option( 'blogname' );
-  $blog_public = get_option( 'blog_public' );
-  $wplang = get_option( 'wplang' );
+  $blog_public = get_option( 'blog_public' ); // Discourage search engines (1 or 0)
   $siteurl = get_option( 'siteurl' );
   $home = get_option( 'home' );
 
@@ -93,7 +92,10 @@ function fh_action_wp_reset()
     // set theme default options
     update_option( 'permalink_structure', '/%category%/%postname%/', true );
     update_option( 'uploads_use_yearmonth_folders', 0, true );
+    update_option( 'wp_page_for_privacy_policy', 0, true );
     update_option( 'upload_path', 'media', true );
+    update_option( 'thumbnail_crop', 0, true );
+    update_option( 'ping_sites', '', true );
   }
 
   // log out and log in
