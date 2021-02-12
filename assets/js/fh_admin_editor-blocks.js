@@ -1,6 +1,6 @@
 /* global wp, wpApiSettings, jQuery, lodash */
 
-/* 
+/*
  * TIPS:
  *
  *  - Wordpress adds various usefull global objects to the "window" scope when
@@ -19,7 +19,7 @@
  *  - Often check how the post and block is saved in MySQL Adminer! Make sure
  *    all the attributes you're using in your render code is saved in the
  *    block comment part of the DB string.
- *  
+ *
  *  - The save() function is used to render what will be saved as the "content"
  *    of your block in the DB. This does NOT have to match the HTML you use
  *    in Editor Mode! In fact, you can make this function return NULL.
@@ -33,7 +33,7 @@
  *    function you specified in your functions.php to render the block's HTML.
  */
 
-(function (wp) {
+jQuery( document ).ready( function () {
 
   /* NOTE: wp.element === React  i.e. wp.element.createElement === el */
   var el = wp.element.createElement;
@@ -51,8 +51,8 @@
 
   /* Used when we register dynamic guten blocks */
   function returnNull( props ) { return null; };
-  
-  
+
+
   /* Shows loading spinner next to message */
   function pleaseWait( message )
   {
@@ -63,7 +63,7 @@
 	      [ el('div'), el('div'), el('div'), el('div') ]
 	    )
 	  ]
-	);      
+	);
   }
 
 
@@ -116,11 +116,11 @@
   var strategies_page_fetchData = withSelect(function( select, ownProps )
   {
 	var core = wp.data.select('core');
-	var all_strategies = core.getEntityRecords( 'taxonomy', 'strategy', 
+	var all_strategies = core.getEntityRecords( 'taxonomy', 'strategy',
 	    { per_page: 100 } );
     return { all_strategies };
   });
-  
+
   var strategies_page_renderEditMode = function( props )
   {
 	if ( ! props.all_strategies ) {
@@ -137,7 +137,7 @@
       var data = { description: value };
       var url = wpApiSettings.root + wpApiSettings.versionString + 'strategy/' + this.strategy.id;
       var beforeSend = function ( xhr ) { xhr.setRequestHeader( 'X-WP-Nonce', wpApiSettings.nonce ); };
-      jQuery.ajax({ method, url, beforeSend, data }).done(function(resp) { console.log( resp ); } );      
+      jQuery.ajax({ method, url, beforeSend, data }).done(function(resp) { console.log( resp ); } );
     }
   	var inspectorElements = [];
   	var all_strategies = props.all_strategies.map(function (strategy) {
@@ -166,7 +166,7 @@
           inspectorElements
         )
       ),
-      all_strategies.length ? el('ul', { class: 'strategies-block' }, 
+      all_strategies.length ? el('ul', { class: 'strategies-block' },
         all_strategies) : el('p', null, 'Wait for the strategies content to load.'),
       strategies_edit_zone ? strategies_edit_zone : ''
 	];
@@ -198,8 +198,8 @@
 //           inspectorElements
 //         )
 //       ),
-//       el('label', null, 'Enter inline code here:'), 
-//       el('textarea', { class: 'fh-code', rows: 7, 
+//       el('label', null, 'Enter inline code here:'),
+//       el('textarea', { class: 'fh-code', rows: 7,
 //         value: props.attributes.code, onChange: update }),
 // 	];
 //   };
@@ -215,4 +215,4 @@
 //     save: returnNull,
 //   } );
 
-})( window.wp );
+});

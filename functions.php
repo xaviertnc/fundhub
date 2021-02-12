@@ -69,6 +69,7 @@ if ( IS_ADMIN )
 
     include FH_INCLUDES . '/admin/fh_admin_ajax_media-page.php';
 
+
     // Enqueue backend assets ( Block Editor )
     function fh_enqueue_block_editor_assets()
     {
@@ -87,7 +88,7 @@ if ( IS_ADMIN )
       );
     }
 
-    add_action( 'enqueue_block_editor_assets', 'fh_enqueue_block_editor_assets' );
+    add_action( 'enqueue_block_editor_assets', 'fh_enqueue_block_editor_assets', 10 );
 
 
     // Enqueue backend assets ( General )
