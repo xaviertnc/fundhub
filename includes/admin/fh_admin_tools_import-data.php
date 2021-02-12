@@ -4,8 +4,10 @@ class FH_Import_Data {
 
   public $site_url = '';
   public $theme_dir = '';
+  public $orig_options = null;
   public $import_path = 'content/import';
   public $uploads_info = array();
+  public $post_ids_map = array();
 
 
   function __construct( $site_url, $theme_dir, $import_path = null )
@@ -14,6 +16,14 @@ class FH_Import_Data {
     $this->theme_dir = $theme_dir;
     if ( isset( $import_path ) ) { $import_path = $import_path; }
     add_action( 'admin_post_fh_import_data', array( $this, 'import_all' ) );
+  }
+
+
+  function arg( $arr = null, $key = null, $default = null )
+  {
+    if ( ! $arr ) { return; }
+    if ( ! $key ) { return $arr; }
+    return isset( $arr[$key] ) ? $arr[$key] : $default;
   }
 
 
@@ -123,7 +133,7 @@ class FH_Import_Data {
         $mapped_props->post_type = $loaded_props->post_type;
       }
     }
-  
+
     if ( isset( $loaded_props->post_status ) )
     {
       $mapped_props->post_status = $loaded_props->post_status;
@@ -153,23 +163,28 @@ class FH_Import_Data {
     echo '<pre>meta_input = ', print_r( $meta_input, true ), '</pre>';
     if ( $meta_input )
     {
-      $mapped_props->meta_input = $meta_input;
       if ( isset( $meta_input[ '_wp_attached_file' ] ) )
       {
         $mapped_props->file = $meta_input[ '_wp_attached_file' ];
       }
-    }
-
-    if ( isset( $meta_input[ '_thumbnail_id' ] ) )
-    {
-      $mapped_props->thumbnail_id = $meta_input[ '_thumbnail_id' ];
+      if ( isset( $meta_input[ '_wp_attachment_metadata' ] ) )
+      {
+        $mapped_props->att_metas = $meta_input[ '_wp_attachment_metadata' ];
+        unset( $meta_input[ '_wp_attachment_metadata' ] );
+      }
+      if ( isset( $meta_input[ '_thumbnail_id' ] ) )
+      {
+        $mapped_props->thumbnail_id = $meta_input[ '_thumbnail_id' ];
+      }
+      unset( $meta_input[ '_edit_lock' ] );
+      $mapped_props->meta_input = $meta_input;
     }
 
     return $mapped_props;
   }
 
 
-  function import_post( $existing_post, $loaded_data )
+  function import_post( $loaded_data, $existing_post )
   {
     echo '<pre>import_post:import_data = ',
       print_r( $loaded_data, true ), '</pre>';
@@ -179,35 +194,38 @@ class FH_Import_Data {
     $map_post_type = empty( $existing_post ) ? 'insert' : 'update';
     $mapped_post_props = $this->map_loaded_post_props(
       $loaded_data->props, $map_post_type );
-    if ( isset( $mapped_post_props->tumbnail_id ) )
+    echo '<pre>import_post:mapped_post_props = ', print_r( $mapped_post_props, true ), '</pre>';
+
+    if ( isset( $mapped_post_props->thumbnail_id ) )
     {
-      $thumbnail_id = $mapped_post_props->tumbnail_id;
-      unset( $mapped_post_props->tumbnail_id );
+      $thumbnail_id = $mapped_post_props->thumbnail_id;
+      unset( $mapped_post_props->thumbnail_id );
     }
     $mapped_post_props->post_content = $loaded_data->content;
     if ( $map_post_type == 'insert' )
     {
-      $result = wp_insert_post( $mapped_post_props, 'wp_error:true' );
+      $post_id = wp_insert_post( $mapped_post_props, 'wp_error:true' );
       echo '<pre>import_post:INSERT Result = ',
-        print_r( $result, true ), '</pre>';
+        print_r( $post_id, true ), '</pre>';
     }
     else /* map_post_type == 'update' */
     {
       $mapped_post_props->ID = $existing_post->ID;
-      $result = wp_update_post( $mapped_post_props, 'wp_error:true' );
+      $post_id = wp_update_post( $mapped_post_props, 'wp_error:true' );
       echo '<pre>import_post:UPDATE Result = ',
-        print_r( $result, true ), '</pre>';
+        print_r( $post_id, true ), '</pre>';
     }
-    if ( is_wp_error( $result ) )
+    if ( is_wp_error( $post_id ) )
     {
-      $errors = $result->get_error_messages();
+      $errors = $post_id->get_error_messages();
       foreach ( $errors as $error )
       {
         echo '<pre>import_post:error =', $error, '</pre>';
       }
     }
-    $parent_post_id = $result;
-    
+    $parent_post_id = $post_id;
+    $this->post_ids_map[ $orig_parent_post_id ] = $parent_post_id;
+
     $all_attachments = array_merge(
       $loaded_data->props->post_attachments,
       $loaded_data->props->other_attachments
@@ -224,7 +242,18 @@ class FH_Import_Data {
       $mapped_att_props = $this->map_loaded_post_props( $attachment, $map_att_type );
       $mapped_att_props->post_parent = $parent_post_id;
       echo '<pre>import_post_attachment:props = ',
-          print_r( $mapped_att_props, true ), '</pre>';      
+          print_r( $mapped_att_props, true ), '</pre>';
+      echo '<pre>import_post_attachment:attachment->post_id = ',
+          print_r( $attachment->post_id, true ), '</pre>';
+      echo '<pre>import_post_attachment:thumbnail_id = ',
+          print_r( $thumbnail_id, true ), '</pre>';
+      // Get Attacment Image Metas
+      if ( isset( $mapped_att_props->att_metas ) )
+      {
+        $att_metas = $mapped_att_props->att_metas;
+        unset( $mapped_att_props->att_metas );
+      }
+      // Get Attacment Image File
       if ( isset( $mapped_att_props->file ) )
       {
         $file_path_rel = $mapped_att_props->file;
@@ -239,18 +268,20 @@ class FH_Import_Data {
          $mapped_att_props->post_parent = $att_parent_post
            ? $att_parent_post->ID : 0;
       }
+      // INSERT Attachment
       if ( $map_att_type == 'insert' )
       {
         $mapped_att_props->post_type = 'attachment';
         $result = wp_insert_post( $mapped_att_props, 'wp_error:true' );
-        echo '<pre>import_post_attachment:INSERT Result = ',
+        echo '<pre>import_post_attachment:INSERT new_attachment_id = ',
           print_r( $result, true ), '</pre>';
       }
+      // UPDATE Attachment
       else /* $map_att_type == 'update' */
       {
         $mapped_att_props->ID = $existing_attachment->ID;
         $result = wp_update_post( $mapped_att_props, 'wp_error:true' );
-        echo '<pre>import_post_attachment:UPDATE Result = ',
+        echo '<pre>import_post_attachment:UPDATE attachment_id = ',
           print_r( $result, true ), '</pre>';
       }
       if ( is_wp_error( $result ) )
@@ -262,6 +293,15 @@ class FH_Import_Data {
         }
       }
       $new_attachment_id = $result;
+      $this->post_ids_map[ $attachment->post_id ] = $new_attachment_id;
+
+      if ( $att_metas )
+      {
+        echo '<pre>import_post_attachment:att_metas = ',
+          print_r( $att_metas, true ), '</pre>';
+        wp_update_attachment_metadata( $new_attachment_id, (array) $att_metas );
+      }
+      // Set the parent post thumbnail ID if this attachment is it's thumnail.
       if ( $att_is_thumbnail )
       {
         update_post_meta( $parent_post_id, '_thumbnail_id', $new_attachment_id );
@@ -273,9 +313,9 @@ class FH_Import_Data {
         $imports_path = $loaded_data->media_dir . '/' . $file_path_rel;
         $uploads_path = $this->uploads_info[ 'path' ] . '/' . $file_path_rel;
         echo '<pre>import_post:imports_file_path = ',
-          print_r( $imports_path, true ), '</pre>';        
+          print_r( $imports_path, true ), '</pre>';
         echo '<pre>import_post:uploads_file_path = ',
-          print_r( $uploads_path, true ), '</pre>';        
+          print_r( $uploads_path, true ), '</pre>';
         if ( !file_exists( $uploads_path ) and file_exists( $imports_path ) )
         {
           wp_mkdir_p( dirname( $uploads_path ) ); // @return true == Dir exists
@@ -286,6 +326,77 @@ class FH_Import_Data {
         else
         {
           echo '<pre>import_post:copy_file = SKIP</pre>';
+        }
+      }
+    }
+  }
+
+
+  function migrate_content()
+  {
+    foreach ( $this->post_ids_map as $orig_post_id => $new_post_id )
+    {
+      $post = get_post( $new_post_id );
+      if ( $post )
+      {
+        echo '<pre>migrate_content:orig_post_id = ', print_r( $orig_post_id, true ), '</pre>';
+        echo '<pre>migrate_content:new_post_id = ', print_r( $new_post_id, true ), '</pre>';
+        $raw_content = $post->post_content;
+        $orig_siteurl = $this->orig_options->siteurl;
+        $content = str_replace($orig_siteurl, $this->site_url, $raw_content );
+        preg_match_all( '/{"ref":(\d+)}/', $content, $matches );
+        echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
+        if ( $matches )
+        {
+          $finds = $matches[0];
+          $ids = $matches[1];
+          $replaces = array();
+          foreach( $ids as $orig_id )
+          {
+            $new_id = $this->arg( $this->post_ids_map, $orig_id );
+            if ( $new_id ) { $replaces[] = '{"ref":' . $new_id . '}'; }
+          }
+          $content = str_replace( $finds, $replaces, $content );
+        }
+        preg_match_all( '/image {"id":(\d+)/', $content, $matches );
+        echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
+        if ( $matches )
+        {
+          $finds = $matches[0];
+          $ids = $matches[1];
+          $replaces = array();
+          foreach( $ids as $orig_id )
+          {
+            $new_id = $this->arg( $this->post_ids_map, $orig_id );
+            if ( $new_id ) { $replaces[] = 'image {"id":' . $new_id; }
+          }
+          $content = str_replace( $finds, $replaces, $content );
+        }
+        preg_match_all( '/wp-image-(\d+)/', $content, $matches );
+        echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
+        if ( $matches )
+        {
+          $finds = $matches[0];
+          $ids = $matches[1];
+          $replaces = array();
+          foreach( $ids as $orig_id )
+          {
+            $new_id = $this->arg( $this->post_ids_map, $orig_id );
+            if ( $new_id ) { $replaces[] = 'wp-image-' . $new_id; }
+          }
+          $content = str_replace( $finds, $replaces, $content );
+        }
+        $post_id = wp_update_post( array(
+          'ID' => $new_post_id,
+          'post_content' => $content
+        ), false );
+        if ( is_wp_error( $post_id ))
+        {
+          $errors = $post_id->get_error_messages();
+          foreach ( $errors as $error )
+          {
+            echo '<pre>migrate_content:error =', $error, '</pre>';
+          }
         }
       }
     }
@@ -306,28 +417,41 @@ class FH_Import_Data {
     $import_basedir = $this->theme_dir . '/' . $this->import_path;
     echo '<pre>import DIR: ', print_r( $import_basedir, true ), '</pre>';
 
+    /* Source WP Options */
+    $options_json = file_get_contents( "$import_basedir/options.json" );
+    $this->orig_options = json_decode( $options_json );
+
     /* Uploads Info */
     $this->uploads_info = wp_upload_dir();
     $this->uploads_info[ 'uploads' ] = untrailingslashit( str_replace(
       trailingslashit( $this->site_url ), '', $this->uploads_info[ 'baseurl' ] ) );
     echo '<pre>UPLOADS INFO: ', print_r( $this->uploads_info, true ), '</pre>';
 
-    $page_dirs = glob( $import_basedir . '/page-posts/*' , GLOB_ONLYDIR );
-    //echo '<pre>PAGE DIRS: ', print_r( $page_dirs, true ), '</pre>';
+    $post_type_dirs = glob( $import_basedir . '/*' , GLOB_ONLYDIR );
+    echo '<pre>POST TYPE DIRS: ', print_r( $post_type_dirs, true ), '</pre>';
 
-    $asm_dirs = glob( $import_basedir . '/asm-posts/*' , GLOB_ONLYDIR );
-    echo '<pre>ASSET MANAGER DIRS: ', print_r( $asm_dirs, true ), '</pre>';
+    $post_dirs = array();
 
-    $loaded_data = $this->load_post( $asm_dirs[ 18 ] );
-    //echo '<pre>IMPORTED POST DATA = ', print_r( $loaded_data, true ), '</pre>';
-    $post_type = $loaded_data->props->post_type;
-    $post_title = $loaded_data->props->post_title;
-    $existing_post = $this->get_post_by_title( $post_title , $post_type );
-    //echo '<pre>EXISTING POST = ', print_r( $existing_post, true ), '</pre>';
-    $this->import_post( $existing_post, $loaded_data );
+    foreach( $post_type_dirs as $post_type_dir )
+    {
+      $type_dirs = glob( "$post_type_dir/*" , GLOB_ONLYDIR );
+      $post_dirs = array_merge( $post_dirs, $type_dirs );
+    }
 
-    //$asm = $this->load_post_files( $asm_dirs[ 10 ] );
-    //echo '<pre>ASM 10: ', print_r( $asm, true ), '</pre>';
+    echo '<pre>POST DIRS: ', print_r( $post_dirs, true ), '</pre>';
+
+    foreach ( $post_dirs as $post_dir )
+    {
+      $loaded_post_data = $this->load_post( $post_dir );
+      $post_type = $loaded_post_data->props->post_type;
+      $post_title = $loaded_post_data->props->post_title;
+      $existing_post = $this->get_post_by_title( $post_title , $post_type );
+      $this->import_post( $loaded_post_data, $existing_post );
+    }
+
+    echo '<pre>POST IDS MAP: ', print_r( $this->post_ids_map, true ), '</pre>';
+
+    $this->migrate_content();
 
   }
 
