@@ -7,14 +7,10 @@ SYSTEM
   config.php
   ----------
 
-    1. Change debug.log folder to <public_html>/../tmp/
-    2. Change debug.log filename format to include the current date.
-
-       <?php define( 'WP_DEBUG_LOG', '../../tmp/wp-debug_'.date('Y-m-d').'.log' ); ?>
-
-    3. Change UPLOADS folder to <webroot>/media
-
-       <?php define('UPLOADS', 'media'); ?>
+  define( 'WP_DEBUG_LOG', '../../tmp/wp-debug_'.date('Y-m-d').'.log' );
+  define('WP_POST_REVISIONS', false );
+  define('AUTOSAVE_INTERVAL', 300 ); // seconds
+  define('UPLOADS', 'media');
 
 
 -------------------------------------------------------------------------------
@@ -34,10 +30,10 @@ FRONT-END
   ---------
 
     1. 404 Page
-    2. CPD Page
+    2. Default Post
     3. Default Page
-    4. Full Width Page
-    5. Default Post
+    4. Taxonomy Page
+    5. Full Width Page
 
 
   Accessability
