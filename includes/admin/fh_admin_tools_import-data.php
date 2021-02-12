@@ -90,27 +90,6 @@ class FH_Import_Data {
   }
 
 
-  function map_post_attachments( $attachments )
-  {
-    $import = array();
-    foreach ( $attachments as $attachment )
-    {
-      $post = new stdClass();
-      $post->post_id = $attachment->ID;
-      $post->post_guid = $attachment->guid;
-      $post->post_author = $attachment->post_author;
-      $post->post_parent = $attachment->post_parent;
-      $post->post_name = $attachment->post_name;
-      $post->post_title = $attachment->post_title;
-      $post->post_excerpt = $attachment->post_excerpt;
-      $post->post_mime_type = $attachment->post_mime_type;
-      $post->post_metas = $attachment->post_metas;
-      $import[] = $post;
-    }
-    return $import;
-  }
-
-
   function import_taxonomy( $taxonomy, $taxonomy_basedir ) {}
 
 
@@ -140,8 +119,15 @@ class FH_Import_Data {
       $mapped_props->post_author = $loaded_props->post_author;
     }
 
-    $mapped_props->post_status = $loaded_props->post_status;
-    $mapped_props->menu_order = $loaded_props->menu_order;
+    if ( isset( $loaded_props->menu_order ) )
+    {
+      $mapped_props->menu_order = $loaded_props->menu_order;
+    }
+
+    if ( isset( $loaded_props->menu_order ) )
+    {
+      $mapped_props->menu_order = $loaded_props->menu_order;
+    }
 
     if ( isset( $loaded_props->post_excerpt ) )
     {
@@ -155,8 +141,10 @@ class FH_Import_Data {
 
     // Meta values save as arrays with a single entry, even if they're scalar values.
     // Convert all array-type values to scalar values in "post_metas" to avoid a mess!
-    $post_metas = $loaded_props->post_metas ? (array) $loaded_props->post_metas : array();
-    $meta_input = array_map( function( $v ){ return is_array( $v ) ? reset( $v ) : $v; }, $post_metas );
+    $post_metas = $loaded_props->post_metas
+      ? (array) $loaded_props->post_metas : array();
+    $meta_input = array_map( function( $v ){ return is_array( $v )
+      ? reset( $v ) : $v; }, $post_metas );
     echo '<pre>meta_input = ', print_r( $meta_input, true ), '</pre>';
     if ( $meta_input )
     {
@@ -174,12 +162,14 @@ class FH_Import_Data {
 
   function import_post( $existing_post, $loaded_data )
   {
-    echo '<pre>import_post:import_data = ', print_r( $loaded_data, true ), '</pre>';
+    echo '<pre>import_post:import_data = ',
+      print_r( $loaded_data, true ), '</pre>';
 
     $thumbnail_id = null;
-    $orig_parent_post_id = $loaded_data->props->ID;
+    $orig_parent_post_id = $loaded_data->props->post_id;
     $map_post_type = empty( $existing_post ) ? 'insert' : 'update';
-    $mapped_post_props = $this->map_loaded_post_props( $loaded_data->props, $map_post_type );
+    $mapped_post_props = $this->map_loaded_post_props(
+      $loaded_data->props, $map_post_type );
     if ( isset( $mapped_props[ 'tumbnail_id' ] ) )
     {
       $thumbnail_id = $mapped_post_props[ 'tumbnail_id' ];
@@ -189,13 +179,15 @@ class FH_Import_Data {
     if ( $map_post_type == 'insert' )
     {
       $result = wp_insert_post( $mapped_post_props, 'wp_error:true' );
-      echo '<pre>import_post:INSERT Result = ', print_r( $result, true ), '</pre>';
+      echo '<pre>import_post:INSERT Result = ',
+        print_r( $result, true ), '</pre>';
     }
     else /* map_post_type == 'update' */
     {
       $mapped_post_props->ID = $existing_post->ID;
       $result = wp_update_post( $mapped_post_props, 'wp_error:true' );
-      echo '<pre>import_post:UPDATE Result = ', print_r( $result, true ), '</pre>';
+      echo '<pre>import_post:UPDATE Result = ',
+        print_r( $result, true ), '</pre>';
     }
     if ( is_wp_error( $result ) )
     {
@@ -207,25 +199,41 @@ class FH_Import_Data {
     }
     $parent_post_id = $result;
 
-    foreach ( $loaded_data->post_attachments as $attachment )
+    $all_attachments = array_merge(
+      $loaded_data->props->post_attachments,
+      $loaded_data->props->other_attachments
+     );
+
+    foreach ( $all_attachments as $attachment )
     {
-      $post_type = $attachment->post_type;
       $post_title = $attachment->post_title;
-      $att_is_thumbnail = ( $attachment->ID == $thumbnail_id );
-      $existing_attachment = $this->get_post_by_title( $post_title, $post_type );
+      $att_is_thumbnail = ( $attachment->post_id == $thumbnail_id );
+      $att_is_not_child = $attachment->post_parent != $orig_parent_post_id;
+      $existing_attachment = $this->get_post_by_title( $post_title, 'attachment' );
       $map_att_type = empty( $existing_attachment ) ? 'insert' : 'update';
       $mapped_att_props = $this->map_loaded_post_props( $attachment, $map_att_type );
       $mapped_att_props->post_parent = $parent_post_id;
+      if ( $att_is_not_child )
+      {
+        $att_parent_post = ( $attachment->post_parent > 0 )
+          ? $this->get_post_by_title($attachment->post_parent_title,
+             $attachment->post_parent_type )
+          : null;
+         $mapped_att_props->post_parent = $att_parent_post
+           ? $att_parent_post->ID : 0;
+      }
       if ( $map_att_type == 'insert' )
       {
         $result = wp_insert_post( $mapped_att_props, 'wp_error:true' );
-        echo '<pre>import_post_attachment:INSERT Result = ', print_r( $result, true ), '</pre>';
+        echo '<pre>import_post_attachment:INSERT Result = ',
+          print_r( $result, true ), '</pre>';
       }
       else /* $map_att_type == 'update' */
       {
         $mapped_att_props->ID = $existing_post->ID;
         $result = wp_update_post( $mapped_att_props, 'wp_error:true' );
-        echo '<pre>import_post_attachment:UPDATE Result = ', print_r( $result, true ), '</pre>';
+        echo '<pre>import_post_attachment:UPDATE Result = ',
+          print_r( $result, true ), '</pre>';
       }
       if ( is_wp_error( $result ) )
       {
@@ -235,16 +243,13 @@ class FH_Import_Data {
           echo '<pre>import_post_attachment:error =', $error, '</pre>';
         }
       }
-      $attachment_id = $result;
+      $new_attachment_id = $result;
       if ( $att_is_thumbnail )
       {
-        update_post_meta( $parent_post_id, '_thumbnail_id', $attachment_id );
+        update_post_meta( $parent_post_id, '_thumbnail_id', $new_attachment_id );
+        echo '<pre>import_post:SET_THUMBNAIL_ID = ',
+          print_r( $new_attachment_id, true ), '</pre>';
       }
-    }
-
-    foreach ( $loaded_data->other_attachments as $attachment )
-    {
-
     }
   }
 
