@@ -61,6 +61,7 @@ function fh_setup_custom_posts()
 	'supports' => array( 'title', 'editor', 'thumbnail', 'revisions',
 	   'author', 'custom-fields', 'page-attributes' ),
 	'taxonomies' => array( 'strategy' ),
+    'can_export' => true
   ) );
 
 }

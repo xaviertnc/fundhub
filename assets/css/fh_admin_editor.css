@@ -29,6 +29,10 @@ a, a:visited {
   color: grey !important;
 }
 
+.sidebar-panel .wp-block-button {
+  width: 100%;    
+}
+
 .sidebar-panel .wp-block-button .wp-block-button__link {
   font-size: 0.9em;
   margin-bottom: 0.5em;

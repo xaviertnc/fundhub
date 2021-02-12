@@ -4,7 +4,10 @@
 function fh_manage_posts_columns( $columns )
 {
   global $post;
-  if ( $post->post_type != 'asset_manager' ) { return $columns; }
+  if ( empty ( $post ) or $post->post_type != 'asset_manager' )
+  {
+    return $columns;
+  }
   $n_columns = [];
   foreach ( $columns as $col_name => $col_title ) {
     $n_columns[$col_name] = $col_title;

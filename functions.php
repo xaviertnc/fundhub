@@ -64,12 +64,12 @@ if ( IS_ADMIN )
     include FH_INCLUDES . '/admin/fh_admin_helper-functions.php';
 
     include FH_INCLUDES . '/admin/fh_admin_tools_export-data.php';
+    include FH_INCLUDES . '/admin/fh_admin_tools_import-data.php';
     include FH_INCLUDES . '/admin/fh_admin_tools_wp-reset.php';
 
     include FH_INCLUDES . '/admin/fh_admin_ajax_media-page.php';
 
-
-    // Enqueue Gutenberg editor assets ( backend )
+    // Enqueue backend assets ( Block Editor )
     function fh_enqueue_block_editor_assets()
     {
       wp_enqueue_style( 'fundhub_admin_editor',
@@ -90,44 +90,8 @@ if ( IS_ADMIN )
     add_action( 'enqueue_block_editor_assets', 'fh_enqueue_block_editor_assets' );
 
 
-    // Enqueue backend scripts
+    // Enqueue backend assets ( General )
     function fh_admin_enqueue_scripts( $page )
-    {
-      if ( $page == 'widgets.php' )
-      {
-        wp_enqueue_media();
-        wp_enqueue_script( 'fundhub_admin_widgets-page',
-          FH_ASSETS . '/js/fh_admin_widgets-page.js',
-          false,
-          '1.0.0',
-          true
-        );
-      }
-      elseif ( $page == 'upload.php' )
-      {
-        wp_enqueue_script( 'fundhub_admin_media-page',
-          FH_ASSETS . '/js/fh_admin_media-page.js',
-          false,
-          '1.0.0',
-          true
-        );
-      }
-    //   elseif ( $page == 'edit.php' )
-    //   {
-    //      wp_enqueue_script( 'fundhub_admin',
-    //       FH_ASSETS . '/js/fh_admin.js',
-    //       array(),
-    //       '1.0.0',
-    //       true
-    //     );
-    //   }
-    }
-
-    add_action( 'admin_enqueue_scripts', 'fh_admin_enqueue_scripts', 10 );
-
-
-    // Enqueue backend styles
-    function fh_admin_enqueue_styles( $page )
     {
       if ( $page == 'edit.php' ) // && ( $_GET['post_type'] == 'asset_manager' )
       {
@@ -138,6 +102,12 @@ if ( IS_ADMIN )
           'all'
         );
         wp_enqueue_style( 'fundhub_admin_list-page' );
+      //wp_enqueue_script( 'fundhub_admin',
+      //  FH_ASSETS . '/js/fh_admin.js',
+      //  array(),
+      //  '1.0.0',
+      //   true
+      //);
       }
       elseif ( $page == 'upload.php' )
       {
@@ -148,16 +118,32 @@ if ( IS_ADMIN )
           'all'
         );
         wp_enqueue_style( 'fundhub_admin_media-page' );
+        wp_enqueue_script( 'fundhub_admin_media-page',
+          FH_ASSETS . '/js/fh_admin_media-page.js',
+          false,
+          '1.0.0',
+          true
+        );
+
+      }
+      elseif ( $page == 'widgets.php' )
+      {
+        wp_enqueue_media();
+        wp_enqueue_script( 'fundhub_admin_widgets-page',
+          FH_ASSETS . '/js/fh_admin_widgets-page.js',
+          false,
+          '1.0.0',
+          true
+        );
       }
     }
 
-    add_action( 'admin_enqueue_scripts', 'fh_admin_enqueue_styles' );
+    add_action( 'admin_enqueue_scripts', 'fh_admin_enqueue_scripts', 10 );
 }
 else /* IS_FRONT */
 {
     include FH_INCLUDES . '/fh_render_dynamic-blocks.php';
     include FH_INCLUDES . '/fh_render_shortcode_multisite-post.php';
-
 
     function fh_enqueue_scripts()
     {

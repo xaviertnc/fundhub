@@ -103,25 +103,30 @@ class FH_Import_Data {
     $props_json = file_get_contents( "$post_dir/post.json" );
     $post->props = json_decode( $props_json );
     $post->content = file_get_contents( "$post_dir/content.html" );
-    $post->media = $this->list_files_relative( "$post_dir/media" );
+    $post->media_dir = "$post_dir/media";
+    $post->media = $this->list_files_relative( $post->media_dir );
     return $post;
   }
 
 
-  function map_loaded_post_props( $loaded_props, $type )
+  function map_loaded_post_props( $loaded_props, $map_type )
   {
     $mapped_props = new stdClass();
 
-    if ( $type == 'insert' )
+    if ( $map_type == 'insert' )
     {
       $mapped_props->post_name = $loaded_props->post_name;
       $mapped_props->post_title = $loaded_props->post_title;
       $mapped_props->post_author = $loaded_props->post_author;
+      if ( isset( $loaded_props->post_type ) )
+      {
+        $mapped_props->post_type = $loaded_props->post_type;
+      }
     }
-
-    if ( isset( $loaded_props->menu_order ) )
+  
+    if ( isset( $loaded_props->post_status ) )
     {
-      $mapped_props->menu_order = $loaded_props->menu_order;
+      $mapped_props->post_status = $loaded_props->post_status;
     }
 
     if ( isset( $loaded_props->menu_order ) )
@@ -149,11 +154,15 @@ class FH_Import_Data {
     if ( $meta_input )
     {
       $mapped_props->meta_input = $meta_input;
+      if ( isset( $meta_input[ '_wp_attached_file' ] ) )
+      {
+        $mapped_props->file = $meta_input[ '_wp_attached_file' ];
+      }
     }
 
     if ( isset( $meta_input[ '_thumbnail_id' ] ) )
     {
-      $mapped_props[ 'thumbnail_id' ] = $meta_input[ '_thumbnail_id' ];
+      $mapped_props->thumbnail_id = $meta_input[ '_thumbnail_id' ];
     }
 
     return $mapped_props;
@@ -170,10 +179,10 @@ class FH_Import_Data {
     $map_post_type = empty( $existing_post ) ? 'insert' : 'update';
     $mapped_post_props = $this->map_loaded_post_props(
       $loaded_data->props, $map_post_type );
-    if ( isset( $mapped_props[ 'tumbnail_id' ] ) )
+    if ( isset( $mapped_post_props->tumbnail_id ) )
     {
-      $thumbnail_id = $mapped_post_props[ 'tumbnail_id' ];
-      unset( $mapped_post_props[ 'tumbnail_id' ] );
+      $thumbnail_id = $mapped_post_props->tumbnail_id;
+      unset( $mapped_post_props->tumbnail_id );
     }
     $mapped_post_props->post_content = $loaded_data->content;
     if ( $map_post_type == 'insert' )
@@ -198,7 +207,7 @@ class FH_Import_Data {
       }
     }
     $parent_post_id = $result;
-
+    
     $all_attachments = array_merge(
       $loaded_data->props->post_attachments,
       $loaded_data->props->other_attachments
@@ -206,6 +215,7 @@ class FH_Import_Data {
 
     foreach ( $all_attachments as $attachment )
     {
+      $file_path_rel = null;
       $post_title = $attachment->post_title;
       $att_is_thumbnail = ( $attachment->post_id == $thumbnail_id );
       $att_is_not_child = $attachment->post_parent != $orig_parent_post_id;
@@ -213,6 +223,13 @@ class FH_Import_Data {
       $map_att_type = empty( $existing_attachment ) ? 'insert' : 'update';
       $mapped_att_props = $this->map_loaded_post_props( $attachment, $map_att_type );
       $mapped_att_props->post_parent = $parent_post_id;
+      echo '<pre>import_post_attachment:props = ',
+          print_r( $mapped_att_props, true ), '</pre>';      
+      if ( isset( $mapped_att_props->file ) )
+      {
+        $file_path_rel = $mapped_att_props->file;
+        unset( $mapped_att_props->file );
+      }
       if ( $att_is_not_child )
       {
         $att_parent_post = ( $attachment->post_parent > 0 )
@@ -224,13 +241,14 @@ class FH_Import_Data {
       }
       if ( $map_att_type == 'insert' )
       {
+        $mapped_att_props->post_type = 'attachment';
         $result = wp_insert_post( $mapped_att_props, 'wp_error:true' );
         echo '<pre>import_post_attachment:INSERT Result = ',
           print_r( $result, true ), '</pre>';
       }
       else /* $map_att_type == 'update' */
       {
-        $mapped_att_props->ID = $existing_post->ID;
+        $mapped_att_props->ID = $existing_attachment->ID;
         $result = wp_update_post( $mapped_att_props, 'wp_error:true' );
         echo '<pre>import_post_attachment:UPDATE Result = ',
           print_r( $result, true ), '</pre>';
@@ -249,6 +267,26 @@ class FH_Import_Data {
         update_post_meta( $parent_post_id, '_thumbnail_id', $new_attachment_id );
         echo '<pre>import_post:SET_THUMBNAIL_ID = ',
           print_r( $new_attachment_id, true ), '</pre>';
+      }
+      if ( $file_path_rel )
+      {
+        $imports_path = $loaded_data->media_dir . '/' . $file_path_rel;
+        $uploads_path = $this->uploads_info[ 'path' ] . '/' . $file_path_rel;
+        echo '<pre>import_post:imports_file_path = ',
+          print_r( $imports_path, true ), '</pre>';        
+        echo '<pre>import_post:uploads_file_path = ',
+          print_r( $uploads_path, true ), '</pre>';        
+        if ( !file_exists( $uploads_path ) and file_exists( $imports_path ) )
+        {
+          wp_mkdir_p( dirname( $uploads_path ) ); // @return true == Dir exists
+          echo @copy( $imports_path, $uploads_path )
+            ? '<pre>import_post:copy_file = OK</pre>'
+            : '<pre>import_post:copy_file = FAILED</pre>';
+        }
+        else
+        {
+          echo '<pre>import_post:copy_file = SKIP</pre>';
+        }
       }
     }
   }
@@ -275,12 +313,12 @@ class FH_Import_Data {
     echo '<pre>UPLOADS INFO: ', print_r( $this->uploads_info, true ), '</pre>';
 
     $page_dirs = glob( $import_basedir . '/page-posts/*' , GLOB_ONLYDIR );
-    echo '<pre>PAGE DIRS: ', print_r( $page_dirs, true ), '</pre>';
+    //echo '<pre>PAGE DIRS: ', print_r( $page_dirs, true ), '</pre>';
 
     $asm_dirs = glob( $import_basedir . '/asm-posts/*' , GLOB_ONLYDIR );
-    //echo '<pre>ASSET MANAGER DIRS: ', print_r( $asm_dirs, true ), '</pre>';
+    echo '<pre>ASSET MANAGER DIRS: ', print_r( $asm_dirs, true ), '</pre>';
 
-    $loaded_data = $this->load_post( $page_dirs[ 4 ] );
+    $loaded_data = $this->load_post( $asm_dirs[ 18 ] );
     //echo '<pre>IMPORTED POST DATA = ', print_r( $loaded_data, true ), '</pre>';
     $post_type = $loaded_data->props->post_type;
     $post_title = $loaded_data->props->post_title;

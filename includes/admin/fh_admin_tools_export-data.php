@@ -16,16 +16,24 @@ class FH_Export_Data {
     add_action( 'admin_post_fh_export_data', array( $this, 'export_all' ) );
   }
 
-  function save_as_json( $file_path, $data )
-  {
-    return file_put_contents( $file_path,
-      json_encode( $data, JSON_PRETTY_PRINT ) );
+
+  function arrayGet( $arr = null, $key = null, $default = null ) {
+    if ( ! $arr ) { return; }
+    if ( ! $key ) { return $arr; }
+    return isset( $arr[$key] ) ? $arr[$key] : $default;
   }
 
 
   function save_as_html( $file_path, $html )
   {
     return file_put_contents( $file_path, $html );
+  }
+
+
+  function save_as_json( $file_path, $data )
+  {
+    return file_put_contents( $file_path,
+      json_encode( $data, JSON_PRETTY_PRINT ) );
   }
 
 
@@ -59,12 +67,33 @@ class FH_Export_Data {
   }
 
 
+  /**
+   * If this function seems weird, it's because metadata values are stored
+   * as arrays, even though we only want single values most of the time!
+   */
   function add_post_metas( $posts )
   {
     foreach ( $posts as $post )
     {
-      $post->post_metas = get_post_meta( $post->ID );
-      unset( $post->post_metas[ '_wp_attachment_metadata' ] );
+      $post_metas = get_post_meta( $post->ID );
+      $values_array = $this->arrayGet( $post_metas, '_wp_attachment_metadata' );
+      if ( $values_array )
+      {
+        $filtered_values_array = array();
+        foreach ( $values_array ?: [] as $serialized_metas )
+        {
+          $metas = unserialize( $serialized_metas );
+          echo '<pre>add_post_metas:unserialized = ', print_r( $metas, true ), '</pre>';
+          $metas[ 'image_meta' ] = array();
+          $metas[ 'sizes' ] = array();
+          //$serialized_metas = serialize( $metas );
+          $filtered_values_array[] = $metas;
+        }
+        $post_metas[ '_wp_attachment_metadata' ] = $filtered_values_array;
+      }
+      $values_array = $this->arrayGet( $post_metas, '_wp_attachment_backup_sizes' );
+      if ( $values_array ) { unset( $post_metas[ '_wp_attachment_backup_sizes' ] ); }
+      $post->post_metas = $post_metas;
     }
     return $posts;
   }
@@ -304,7 +333,7 @@ class FH_Export_Data {
     return $results;
   }
 
-
+  
   function export_taxonomy( $taxonomy, $taxonomy_basedir )
   {
     $taxonomy_terms = $this->get_taxonomy_terms( $taxonomy );
@@ -314,7 +343,7 @@ class FH_Export_Data {
     {
       $file_path = $taxonomy_basedir . '/' . $taxonomy . '.json';
       $this->save_as_json( $file_path, $taxonomy_terms );
-    }
+    }      
   }
 
 
@@ -332,7 +361,7 @@ class FH_Export_Data {
     if ( $this->create_folder( $nav_menus_basedir ) )
     {
       $this->save_as_json( $nav_menus_basedir . '/navmenus.json', $nav_menus );
-    }
+    }      
   }
 
 
@@ -359,6 +388,8 @@ class FH_Export_Data {
         $post->post_metas = get_post_meta( $post->ID );
         $post->post_metas = $this->filter_post_metas( $post->post_metas );
         $post = $this->map_post( $post );
+        $post->taxonomies = get_post_taxonomies( $post->post_id );
+        $post->terms = wp_get_post_terms( $post->post_id, 'strategy' );
 
         $this->save_as_json( $post_basedir . '/post.json', $post );
 
@@ -400,7 +431,7 @@ class FH_Export_Data {
           }
         }
       }
-    }
+    }      
   }
 
 
