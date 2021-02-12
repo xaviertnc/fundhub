@@ -17,7 +17,8 @@ class FH_Export_Data {
   }
 
 
-  function arrayGet( $arr = null, $key = null, $default = null ) {
+  function arg( $arr = null, $key = null, $default = null )
+  {
     if ( ! $arr ) { return; }
     if ( ! $key ) { return $arr; }
     return isset( $arr[$key] ) ? $arr[$key] : $default;
@@ -76,7 +77,7 @@ class FH_Export_Data {
     foreach ( $posts as $post )
     {
       $post_metas = get_post_meta( $post->ID );
-      $values_array = $this->arrayGet( $post_metas, '_wp_attachment_metadata' );
+      $values_array = $this->arg( $post_metas, '_wp_attachment_metadata' );
       if ( $values_array )
       {
         $filtered_values_array = array();
@@ -91,8 +92,8 @@ class FH_Export_Data {
         }
         $post_metas[ '_wp_attachment_metadata' ] = $filtered_values_array;
       }
-      $values_array = $this->arrayGet( $post_metas, '_wp_attachment_backup_sizes' );
-      if ( $values_array ) { unset( $post_metas[ '_wp_attachment_backup_sizes' ] ); }
+      unset( $post_metas[ '_wp_attachment_backup_sizes' ] );
+      unset( $post_metas[ '_edit_lock' ] );
       $post->post_metas = $post_metas;
     }
     return $posts;
@@ -471,6 +472,8 @@ class FH_Export_Data {
     /* Asset Manager Posts */
     $this->export_post( 'asset_manager', "{$export_basedir}/asm-posts" );
 
+    /* Wp Block Posts */
+    $this->export_post( 'wp_block', "{$export_basedir}/wp-block-posts" );
   }
 
 } // end: FH_Export_Data
