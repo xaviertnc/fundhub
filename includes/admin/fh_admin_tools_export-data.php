@@ -400,7 +400,7 @@ class FH_Export_Data {
 
   function export_post( $post_type, $posts_basedir )
   {
-    $posts = $this->get_post_type( $post_type );
+    $posts = $this->get_post_type( $post_type, array( 'publish', 'private' ) );
     if ( $posts and $this->create_folder( $posts_basedir ) )
     {
       $posts = fh_sort_objects_by( $posts, 'menu_order', 'numeric' );
@@ -488,6 +488,9 @@ class FH_Export_Data {
     $this->uploads_info[ 'uploads' ] = untrailingslashit( str_replace(
       trailingslashit( $this->site_url ), '', $this->uploads_info[ 'baseurl' ] ) );
     echo '<pre>UPLOADS INFO: ', print_r( $this->uploads_info, true ), '</pre>';
+
+    /* Options */
+    $this->export_options( $export_basedir );
 
     /* Taxonomies */
     $this->export_taxonomies( $export_basedir );
