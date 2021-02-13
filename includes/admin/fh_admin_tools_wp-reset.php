@@ -19,6 +19,9 @@ function fh_action_wp_reset()
 
   // save values that need to be restored after reset
   $blogname = get_option( 'blogname' );
+  $show_on_front = get_option( 'show_on_front' );
+  $page_on_front = get_option( 'page_on_front' );
+  $page_for_posts = get_option( 'page_for_posts' );
   $blog_description = get_option( 'blogdescription' );
   $blog_public = get_option( 'blog_public' ); // Discourage search engines (1 or 0)
   $wplang = get_option( 'WPLANG', 'en_ZA' );
@@ -96,6 +99,9 @@ function fh_action_wp_reset()
     update_option( 'permalink_structure', '/%category%/%postname%/', true );
     update_option( 'uploads_use_yearmonth_folders', 0, true );
     update_option( 'wp_page_for_privacy_policy', 0, true );
+    update_option( 'show_on_front', $show_on_front, true );
+    update_option( 'page_for_posts', $page_for_posts, true );
+    update_option( 'page_on_front', $page_on_front, true );
     update_option( 'upload_path', 'media', true );
     update_option( 'thumbnail_crop', 0, true );
     update_option( 'ping_sites', '', true );

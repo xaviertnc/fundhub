@@ -5,6 +5,7 @@ class FH_Export_Data {
   public $site_url = '';
   public $theme_dir = '';
   public $export_path = 'content/export';
+  public $page_on_front_id = 0;
   public $uploads_info = array();
 
 
@@ -398,7 +399,7 @@ class FH_Export_Data {
   }
 
 
-  function export_post( $post_type, $posts_basedir )
+  function export_post_type( $post_type, $posts_basedir )
   {
     $posts = $this->get_post_type( $post_type, array( 'publish', 'private' ) );
     if ( $posts and $this->create_folder( $posts_basedir ) )
@@ -423,6 +424,11 @@ class FH_Export_Data {
         $post = $this->map_post( $post );
         $post->taxonomies = get_post_taxonomies( $post->post_id );
         $post->terms = wp_get_post_terms( $post->post_id, 'strategy' );
+
+        if ( $post_type == 'page' and $post_id == $this->page_on_front_id )
+        {
+          $post->is_fontpage = true;
+        }
 
         $this->save_as_json( $post_basedir . '/post.json', $post );
 
@@ -489,6 +495,8 @@ class FH_Export_Data {
       trailingslashit( $this->site_url ), '', $this->uploads_info[ 'baseurl' ] ) );
     echo '<pre>UPLOADS INFO: ', print_r( $this->uploads_info, true ), '</pre>';
 
+    $this->page_on_front_id = get_option( 'page_on_front', 0 );
+
     /* Options */
     $this->export_options( $export_basedir );
 
@@ -499,13 +507,13 @@ class FH_Export_Data {
     $this->export_nav_menus( $export_basedir );
 
     /* Page Posts */
-    $this->export_post( 'page', "{$export_basedir}/page-posts" );
+    $this->export_post_type( 'page', "{$export_basedir}/page-posts" );
 
     /* Asset Manager Posts */
-    $this->export_post( 'asset_manager', "{$export_basedir}/asm-posts" );
+    $this->export_post_type( 'asset_manager', "{$export_basedir}/asm-posts" );
 
     /* Wp Block Posts */
-    $this->export_post( 'wp_block', "{$export_basedir}/wp-block-posts" );
+    $this->export_post_type( 'wp_block', "{$export_basedir}/wp-block-posts" );
   }
 
 } // end: FH_Export_Data
