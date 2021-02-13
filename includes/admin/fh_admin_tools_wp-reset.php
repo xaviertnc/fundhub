@@ -19,7 +19,9 @@ function fh_action_wp_reset()
 
   // save values that need to be restored after reset
   $blogname = get_option( 'blogname' );
+  $blog_description = get_option( 'blogdescription' );
   $blog_public = get_option( 'blog_public' ); // Discourage search engines (1 or 0)
+  $wplang = get_option( 'WPLANG', 'en_ZA' );
   $siteurl = get_option( 'siteurl' );
   $home = get_option( 'home' );
 
@@ -77,7 +79,7 @@ function fh_action_wp_reset()
   }
 
   // reactivate all plugins
-  if ( ! empty( $_POST[ 'keep_plugins' ] ) )
+  if ( ! empty( $_POST[ 'restore_plugins' ] ) )
   {
     foreach ( $active_plugins as $plugin_file )
     {
@@ -86,10 +88,11 @@ function fh_action_wp_reset()
   }
 
   // reactivate theme
-  if ( ! empty( $_POST[ 'keep_theme' ] ) )
+  if ( ! empty( $_POST[ 'restore_theme' ] ) )
   {
     switch_theme( $active_theme->get_stylesheet() );
     // set theme default options
+    update_option( 'blogdescription', $blog_description, true );
     update_option( 'permalink_structure', '/%category%/%postname%/', true );
     update_option( 'uploads_use_yearmonth_folders', 0, true );
     update_option( 'wp_page_for_privacy_policy', 0, true );

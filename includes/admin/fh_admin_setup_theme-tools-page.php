@@ -10,7 +10,7 @@ function fh_render_tools_page()
 
 function fh_create_tools_submenu()
 {
-  add_management_page( 'Theme Tools', 'FUND HUB Tools', 'manage_options',
+  add_management_page( 'Theme Tools', 'HUB Tools', 'manage_options',
     'fh_tools', 'fh_render_tools_page', 0 );
 }
 
