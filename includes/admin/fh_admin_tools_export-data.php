@@ -25,6 +25,14 @@ class FH_Export_Data {
   }
 
 
+  function drop_keys( array $arr, array $drop_keys = [] )
+  {
+    return array_filter( $arr, function( $meta_key ) use ( $drop_keys ) {
+      return ! in_array( $meta_key, $drop_keys );
+    }, ARRAY_FILTER_USE_KEY );
+  }
+
+
   function save_as_html( $file_path, $html )
   {
     return file_put_contents( $file_path, $html );
@@ -334,17 +342,41 @@ class FH_Export_Data {
     return $results;
   }
 
-  
-  function export_taxonomy( $taxonomy, $taxonomy_basedir )
+
+  function export_options( $options_basedir )
   {
-    $taxonomy_terms = $this->get_taxonomy_terms( $taxonomy );
-    $taxonomy_terms = $this->map_terms( $taxonomy_terms );
-    $taxonomy_terms = fh_sort_objects_by( $taxonomy_terms, 'name' );
+    $options = array(
+      'siteurl'  => get_option( 'siteurl' ),
+      'blogname' => get_option( 'blogname' ),
+      'blogdescription' => get_option( 'blogdescription' ),
+      'upload_path' => get_option( 'upload_path' )
+    );
+    if ( $this->create_folder( $options_basedir ) )
+    {
+      $file_path = $options_basedir . '/options.json';
+      $this->save_as_json( $file_path, $options );
+    }
+  }
+
+
+  function export_taxonomies( $taxonomy_basedir )
+  {
+
+    $taxonomies = get_taxonomies( array(), 'objects' );
+    $taxonomies = $this->drop_keys( $taxonomies?:[],
+      array( 'post_tag', 'link_category', 'post_format' ) );
+    foreach ( $taxonomies as $taxonomy => $props )
+    {
+      $taxonomy_terms = $this->get_taxonomy_terms( $taxonomy );
+      $taxonomy_terms = $this->map_terms( $taxonomy_terms );
+      $taxonomy_terms = fh_sort_objects_by( $taxonomy_terms, 'name' );
+      $props->terms = $taxonomy_terms;
+    }
     if ( $this->create_folder( $taxonomy_basedir ) )
     {
-      $file_path = $taxonomy_basedir . '/' . $taxonomy . '.json';
-      $this->save_as_json( $file_path, $taxonomy_terms );
-    }      
+      $file_path = $taxonomy_basedir . '/taxonomies.json';
+      $this->save_as_json( $file_path, $taxonomies );
+    }
   }
 
 
@@ -362,7 +394,7 @@ class FH_Export_Data {
     if ( $this->create_folder( $nav_menus_basedir ) )
     {
       $this->save_as_json( $nav_menus_basedir . '/navmenus.json', $nav_menus );
-    }      
+    }
   }
 
 
@@ -432,7 +464,7 @@ class FH_Export_Data {
           }
         }
       }
-    }      
+    }
   }
 
 
@@ -457,11 +489,8 @@ class FH_Export_Data {
       trailingslashit( $this->site_url ), '', $this->uploads_info[ 'baseurl' ] ) );
     echo '<pre>UPLOADS INFO: ', print_r( $this->uploads_info, true ), '</pre>';
 
-    /* Categories */
-    $this->export_taxonomy( 'category', $export_basedir );
-
-    /* Strategies */
-    $this->export_taxonomy( 'strategy', $export_basedir );
+    /* Taxonomies */
+    $this->export_taxonomies( $export_basedir );
 
     /* Nav Menus */
     $this->export_nav_menus( $export_basedir );
