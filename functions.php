@@ -44,10 +44,13 @@ function fh_after_setup_theme()
 
   // Add Theme Support Options
   add_theme_support( 'html5' );
+  add_theme_support( 'title-tag' );
   add_theme_support( 'align-wide' );
   add_theme_support( 'post-thumbnails' );
   add_theme_support( 'customize-selective-refresh-widgets' );
   add_theme_support( 'custom-logo', array( 'flex-width' => true ) );
+
+  load_theme_textdomain( 'fundhub' );
 }
 
 add_action( 'after_setup_theme', 'fh_after_setup_theme', 10 );
