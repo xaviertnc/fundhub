@@ -263,7 +263,15 @@ class FH_Import_Data {
       {
         echo '<pre>import_post:error =', $error, '</pre>';
       }
+      return;
     }
+
+    if ( isset( $loaded_data->is_frontpage ) )
+    {
+      update_option( 'show_on_front', 'page', true );
+      update_option( 'page_on_front', $post_id, true );
+    }
+
     $parent_post_id = $post_id;
     $this->post_ids_map[ $orig_parent_post_id ] = $parent_post_id;
 
@@ -332,6 +340,7 @@ class FH_Import_Data {
         {
           echo '<pre>import_post_attachment:error =', $error, '</pre>';
         }
+        continue;
       }
       $new_attachment_id = $result;
       $this->post_ids_map[ $attachment->post_id ] = $new_attachment_id;
