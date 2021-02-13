@@ -427,7 +427,7 @@ class FH_Export_Data {
 
         if ( $post_type == 'page' and $post_id == $this->page_on_front_id )
         {
-          $post->is_fontpage = true;
+          $post->is_frontpage = true;
         }
 
         $this->save_as_json( $post_basedir . '/post.json', $post );

@@ -17,6 +17,8 @@ function fh_action_wp_reset()
     require ABSPATH . '/wp-admin/includes/upgrade.php';
   }
 
+  $restore_theme = ! empty( $_POST[ 'restore_theme' ] );
+
   // save values that need to be restored after reset
   $blogname = get_option( 'blogname' );
   $show_on_front = get_option( 'show_on_front' );
@@ -40,7 +42,7 @@ function fh_action_wp_reset()
   }
 
   $result = @wp_install(
-    $blogname,
+    $restore_theme ? $blogname : 'Vanilla Wordpress',
     $current_user->user_login,
   	$current_user->user_email,
     $blog_public,
@@ -91,7 +93,7 @@ function fh_action_wp_reset()
   }
 
   // reactivate theme
-  if ( ! empty( $_POST[ 'restore_theme' ] ) )
+  if ( $restore_theme )
   {
     switch_theme( $active_theme->get_stylesheet() );
     // set theme default options
