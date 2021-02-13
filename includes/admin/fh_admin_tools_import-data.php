@@ -100,18 +100,49 @@ class FH_Import_Data {
   }
 
 
-  function import_taxonomy( $taxonomy, $taxonomy_basedir ) {}
+  function import_taxonomies( $taxonomies )
+  {
+    // echo '<pre>import_taxonomies: ', print_r( $taxonomies, true ), '</pre>';
+    $taxonomy_names = array_keys( (array) $taxonomies );
+    echo '<pre>import_taxonomies: ', print_r( $taxonomy_names, true ), '</pre>';
+    foreach ( (array) $taxonomies as $taxonomy_name => $taxonomy )
+    {
+      /**
+       * @TODO: We need to keep a term_ids_map array and resolve parent_ids
+       * against this list for hieracrhical terms.
+       */
+      foreach ( $taxonomy->terms as $term )
+      {
+        echo '<pre>term: ', print_r( $term->name, true ), '</pre>';
+        $args = array('slug' => $term->slug );
+        if ( $term->description ) { $args[ 'description' ] = $term->description; }
+        if ( $term->parent > 0 ) { $args[ 'parent' ] = $term->parent; }
+        // if ( term_exists( $term->name, $taxonomy_name, null/*parent*/ ) ) { continue; }
+        wp_insert_term( $term->name, $taxonomy_name, $args );
+      }
+    }
+  }
 
 
   function import_nav_menus( $nav_menus_basedir ) {}
 
 
-  function load_post( $post_dir = null )
+  function load_post_props( $post_dir = null )
   {
-    $post = new stdClass();
     if ( empty( $post_dir ) ) { return; }
     $props_json = file_get_contents( "$post_dir/post.json" );
-    $post->props = json_decode( $props_json );
+    $props = json_decode( $props_json );
+    if ( $props ) { $props->basedir = $post_dir; }
+    return $props;
+  }
+
+
+  function load_post_data( $post_props )
+  {
+    $post = new stdClass();
+    $post_dir = $post_props->basedir;
+    unset( $post_props->basedir );
+    $post->props = $post_props;
     $post->content = file_get_contents( "$post_dir/content.html" );
     $post->media_dir = "$post_dir/media";
     $post->media = $this->list_files_relative( $post->media_dir );
@@ -119,7 +150,7 @@ class FH_Import_Data {
   }
 
 
-  function map_loaded_post_props( $loaded_props, $map_type )
+  function map_post_props( $loaded_props, $map_type )
   {
     $mapped_props = new stdClass();
 
@@ -128,6 +159,7 @@ class FH_Import_Data {
       $mapped_props->post_name = $loaded_props->post_name;
       $mapped_props->post_title = $loaded_props->post_title;
       $mapped_props->post_author = $loaded_props->post_author;
+      $mapped_props->post_parent = $loaded_props->post_parent;
       if ( isset( $loaded_props->post_type ) )
       {
         $mapped_props->post_type = $loaded_props->post_type;
@@ -184,34 +216,43 @@ class FH_Import_Data {
   }
 
 
-  function import_post( $loaded_data, $existing_post )
+  function import_post( $post_props )
   {
+    $loaded_data = $this->load_post_data( $post_props );
+    $post_type = $loaded_data->props->post_type;
+    $post_title = $loaded_data->props->post_title;
+    $existing_post = $this->get_post_by_title( $post_title , $post_type );
+
     echo '<pre>import_post:import_data = ',
       print_r( $loaded_data, true ), '</pre>';
 
     $thumbnail_id = null;
     $orig_parent_post_id = $loaded_data->props->post_id;
     $map_post_type = empty( $existing_post ) ? 'insert' : 'update';
-    $mapped_post_props = $this->map_loaded_post_props(
-      $loaded_data->props, $map_post_type );
-    echo '<pre>import_post:mapped_post_props = ', print_r( $mapped_post_props, true ), '</pre>';
+    $mapped_props = $this->map_post_props( $loaded_data->props, $map_post_type );
+    echo '<pre>import_post:mapped_props = ', print_r( $mapped_props, true ), '</pre>';
 
-    if ( isset( $mapped_post_props->thumbnail_id ) )
+    if ( isset( $mapped_props->thumbnail_id ) )
     {
-      $thumbnail_id = $mapped_post_props->thumbnail_id;
-      unset( $mapped_post_props->thumbnail_id );
+      $thumbnail_id = $mapped_props->thumbnail_id;
+      unset( $mapped_props->thumbnail_id );
     }
-    $mapped_post_props->post_content = $loaded_data->content;
+    $mapped_props->post_content = $loaded_data->content;
     if ( $map_post_type == 'insert' )
     {
-      $post_id = wp_insert_post( $mapped_post_props, 'wp_error:true' );
+      if ( $mapped_props->post_parent > 0 )
+      {
+        $mapped_props->post_parent = $this->arg(
+          $this->post_ids_map, $mapped_props->post_parent, 0 );
+      }
+      $post_id = wp_insert_post( $mapped_props, 'wp_error:true' );
       echo '<pre>import_post:INSERT Result = ',
         print_r( $post_id, true ), '</pre>';
     }
     else /* map_post_type == 'update' */
     {
-      $mapped_post_props->ID = $existing_post->ID;
-      $post_id = wp_update_post( $mapped_post_props, 'wp_error:true' );
+      $mapped_props->ID = $existing_post->ID;
+      $post_id = wp_update_post( $mapped_props, 'wp_error:true' );
       echo '<pre>import_post:UPDATE Result = ',
         print_r( $post_id, true ), '</pre>';
     }
@@ -239,7 +280,7 @@ class FH_Import_Data {
       $att_is_not_child = $attachment->post_parent != $orig_parent_post_id;
       $existing_attachment = $this->get_post_by_title( $post_title, 'attachment' );
       $map_att_type = empty( $existing_attachment ) ? 'insert' : 'update';
-      $mapped_att_props = $this->map_loaded_post_props( $attachment, $map_att_type );
+      $mapped_att_props = $this->map_post_props( $attachment, $map_att_type );
       $mapped_att_props->post_parent = $parent_post_id;
       echo '<pre>import_post_attachment:props = ',
           print_r( $mapped_att_props, true ), '</pre>';
@@ -420,6 +461,11 @@ class FH_Import_Data {
     /* Source WP Options */
     $options_json = file_get_contents( "$import_basedir/options.json" );
     $this->orig_options = json_decode( $options_json );
+    echo '<pre>ORIG WP OPTIONS: ', print_r( $this->orig_options, true ), '</pre>';
+
+    /* Taxonomies */
+    $taxonomies_json = file_get_contents( "$import_basedir/taxonomies.json" );
+    $this->import_taxonomies( json_decode( $taxonomies_json ) );
 
     /* Uploads Info */
     $this->uploads_info = wp_upload_dir();
@@ -440,13 +486,32 @@ class FH_Import_Data {
 
     echo '<pre>POST DIRS: ', print_r( $post_dirs, true ), '</pre>';
 
+    $top_level_posts = array();
+    $child_posts = array();
+
     foreach ( $post_dirs as $post_dir )
     {
-      $loaded_post_data = $this->load_post( $post_dir );
-      $post_type = $loaded_post_data->props->post_type;
-      $post_title = $loaded_post_data->props->post_title;
-      $existing_post = $this->get_post_by_title( $post_title , $post_type );
-      $this->import_post( $loaded_post_data, $existing_post );
+      $post_props = $this->load_post_props( $post_dir );
+      if ( ! $post_props ) { continue; }
+      if ( $post_props->post_parent > 0 )
+      {
+        $child_posts[] = $post_props;
+      }
+      else
+      {
+        $top_level_posts[] = $post_props;
+      }
+    }
+
+    /* Load Top Level ( Parent ) Posts First. */
+    foreach ( $top_level_posts as $post_props )
+    {
+      $this->import_post( $post_props );
+    }
+
+    foreach ( $child_posts as $post_props )
+    {
+      $this->import_post( $post_props );
     }
 
     echo '<pre>POST IDS MAP: ', print_r( $this->post_ids_map, true ), '</pre>';
