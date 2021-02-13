@@ -15,6 +15,7 @@ function fh_setup_custom_posts()
      'add_new_item'      => __( 'Add New Strategy', 'fundhub' ),
      'new_item_name'     => __( 'New Strategy Name', 'fundhub' ),
      'menu_name'         => __( 'Strategies', 'fundhub' ),
+     'not_found'         => __( 'No strategies found.', 'fundhub' )
    );
 
    $args = array(
