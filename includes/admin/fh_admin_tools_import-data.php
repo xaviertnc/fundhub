@@ -27,6 +27,17 @@ class FH_Import_Data {
   }
 
 
+  function extract_term_names( $taxonomy, array $terms )
+  {
+    $result = array_filter( $terms,
+      function( $term ) use ( $taxonomy ) { return $term->taxonomy == $taxonomy; }
+    );
+    return $result
+      ? array_map( function( $term ) { return $term->name; }, $result )
+      : array();
+  }
+
+
   function list_files_relative( $root_dir )
   {
     $files = new RecursiveIteratorIterator(
@@ -266,10 +277,18 @@ class FH_Import_Data {
       return;
     }
 
-    if ( isset( $loaded_data->is_frontpage ) )
+    if ( isset( $loaded_data->props->is_frontpage ) )
     {
       update_option( 'show_on_front', 'page', true );
       update_option( 'page_on_front', $post_id, true );
+    }
+
+    /* Assign Strategies */
+    if ( $post_type == 'asset_manager' )
+    {
+      $terms = $loaded_data->props->terms?:[];
+      $strategy_term_names = $this->extract_term_names( 'strategy', $terms );
+      wp_set_post_terms( $post_id, $strategy_term_names, 'strategy', false );
     }
 
     $parent_post_id = $post_id;
