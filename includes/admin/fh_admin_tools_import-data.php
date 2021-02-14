@@ -21,9 +21,58 @@ class FH_Import_Data {
 
   function arg( $arr = null, $key = null, $default = null )
   {
-    if ( ! $arr ) { return; }
-    if ( ! $key ) { return $arr; }
+    if ( ! $arr or ! $key ) { return; }
     return isset( $arr[$key] ) ? $arr[$key] : $default;
+  }
+
+
+  function tree_array( array $array, $id_prop, $parent_prop )
+  {
+    $depth = 0;
+    $tree = array();
+    $index = array();
+    $remaining = array();
+
+    // Initialize tree
+    foreach ( $array as $item )
+    {
+      $item->children = array();
+      $id = $item->$id_prop;
+
+      // If this is a top-level node, add it to the tree immediately
+      if ( empty( $item->$parent_prop ) )
+      {
+        $index[ $id ] = $item;
+        $tree[] =& $index[ $id ];
+      }
+      // If this isn't a top-level node, we have to process it later
+      else
+      {
+        $remaining[ $id ] = $item;
+      }
+    }
+
+    // Process all 'remaining' nodes
+    // Check 'depth' to prevent bad things from happening. :0)
+    while ( $remaining and $depth < 10 )
+    {
+      foreach( $remaining as $item )
+      {
+        $id = $item->$id_prop;
+        $pid = $item->$parent_prop;
+        // If the parent has already been added to the tree, it's
+        // safe to add this node too
+        if ( isset ( $index[ $pid ] ) )
+        {
+          $index[ $id ] = $item;
+          $index[ $pid ]->children[] =& $index[ $id ];
+          unset( $remaining[ $id ] );
+        }
+      }
+      $depth += 1;
+    }
+
+    return $tree;
   }
 
 
@@ -128,14 +177,74 @@ class FH_Import_Data {
         $args = array('slug' => $term->slug );
         if ( $term->description ) { $args[ 'description' ] = $term->description; }
         if ( $term->parent > 0 ) { $args[ 'parent' ] = $term->parent; }
-        // if ( term_exists( $term->name, $taxonomy_name, null/*parent*/ ) ) { continue; }
         wp_insert_term( $term->name, $taxonomy_name, $args );
       }
     }
   }
 
 
-  function import_nav_menus( $nav_menus_basedir ) {}
+  function delete_menu_items( $menu_id )
+  {
+    global $wpdb;
+    $menu_items = wp_get_nav_menu_items( $menu_id );
+    // echo '<pre>DELETE MENU ITEMS menu-', $menu_id, ': ', print_r( $menu_items, true ), '</pre>';
+    foreach ( (array) $menu_items as $menu_item ) { wp_delete_post( $menu_item->ID, true ); }
+    // $wpdb->delete( $wpdb->term_relationships, array( 'term_taxonomy_id' => $menu_id ) );
+  }
+
+
+  function add_menuitem_recursive( $menu_id, $item )
+  {
+    $object_id = $this->arg( $this->post_ids_map, $item->object_id );
+    $args = array(
+      'menu-item-object-id'   => $object_id,
+      'menu-item-object'      => $item->object,
+      'menu-item-type'        => $item->type,
+      'menu-item-status'      => $item->post_status,
+      'menu-item-classes'     => implode( ' ', $item->classes ),
+      'menu-item-position'    => $item->menu_order,
+      'menu-item-description' => $item->description,
+      'menu-item-attr-title'  => $item->attr_title,
+      'menu-item-target'      => $item->target,
+      'menu-item-title'       => $item->title,
+      'menu-item-url'         => $item->url ? $this->migrate_urls( $item->url ): ''
+    );
+    echo '<pre>ADD MENU-', $menu_id, ' ITEM: ', print_r( $args, true ), '</pre>';
+    $item_post_id = wp_update_nav_menu_item( $menu_id, 0, $args );
+    echo '<pre>ITEM ID: ', print_r( $item_post_id, true ), '</pre>';
+    if ( is_wp_error( $item_post_id ) ) { return; }
+    foreach ( $item->children?:[] as $child_item )
+    {
+      $this->add_menuitem_recursive( $menu_id, $child_item );
+    }
+  }
+
+
+  function import_nav_menus( $nav_menus_basedir )
+  {
+    $navmenus_json = file_get_contents( "$nav_menus_basedir/navmenus.json" );
+    $navmenus = json_decode( $navmenus_json );
+    if ( $navmenus ) { $navmenus = (array) $navmenus; } else { return; }
+    $menu_locations_map = array();
+    foreach ( $navmenus as $menu => $menu_items )
+    {
+      $menu_obj = get_term_by( 'name', $menu, 'nav_menu' );
+      $menu_id = $menu_obj->term_id;
+      $this->delete_menu_items( $menu_id );
+      $menu_locations_map[ $menu ] = $menu_id;
+      echo '<pre>NAV MENU ', $menu, ': ', print_r( $menu_obj, true ), '</pre>';
+      $tree = $this->tree_array( $menu_items, 'post_id', 'menu_item_parent' );
+      echo '<pre>ITEMS TREE: ', print_r( $tree, true ), '</pre>';
+      foreach ( $tree as $item )
+      {
+        $this->add_menuitem_recursive( $menu_id, $item );
+      }
+    }
+    if ( $menu_locations_map )
+    {
+      set_theme_mod( 'nav_menu_locations', $menu_locations_map );
+    }
+  }
 
 
   function load_post_props( $post_dir = null )
@@ -294,12 +403,12 @@ class FH_Import_Data {
     $parent_post_id = $post_id;
     $this->post_ids_map[ $orig_parent_post_id ] = $parent_post_id;
 
-    $all_attachments = array_merge(
+    $index_attachments = array_merge(
       $loaded_data->props->post_attachments,
       $loaded_data->props->other_attachments
      );
 
-    foreach ( $all_attachments as $attachment )
+    foreach ( $index_attachments as $attachment )
     {
       $file_path_rel = null;
       $post_title = $attachment->post_title;
@@ -401,6 +510,12 @@ class FH_Import_Data {
   }
 
 
+  function migrate_urls( $content )
+  {
+    return str_replace($this->orig_options->siteurl, $this->site_url, $content );
+  }
+
+
   function migrate_content()
   {
     foreach ( $this->post_ids_map as $orig_post_id => $new_post_id )
@@ -408,13 +523,11 @@ class FH_Import_Data {
       $post = get_post( $new_post_id );
       if ( $post )
       {
-        echo '<pre>migrate_content:orig_post_id = ', print_r( $orig_post_id, true ), '</pre>';
-        echo '<pre>migrate_content:new_post_id = ', print_r( $new_post_id, true ), '</pre>';
-        $raw_content = $post->post_content;
-        $orig_siteurl = $this->orig_options->siteurl;
-        $content = str_replace($orig_siteurl, $this->site_url, $raw_content );
+        //echo '<pre>migrate_content:orig_post_id = ', print_r( $orig_post_id, true ), '</pre>';
+        //echo '<pre>migrate_content:new_post_id = ', print_r( $new_post_id, true ), '</pre>';
+        $content = $this->migrate_urls( $post->post_content );
         preg_match_all( '/{"ref":(\d+)}/', $content, $matches );
-        echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
+        //echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
         if ( $matches )
         {
           $finds = $matches[0];
@@ -428,7 +541,7 @@ class FH_Import_Data {
           $content = str_replace( $finds, $replaces, $content );
         }
         preg_match_all( '/image {"id":(\d+)/', $content, $matches );
-        echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
+        //echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
         if ( $matches )
         {
           $finds = $matches[0];
@@ -442,7 +555,7 @@ class FH_Import_Data {
           $content = str_replace( $finds, $replaces, $content );
         }
         preg_match_all( '/wp-image-(\d+)/', $content, $matches );
-        echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
+        //echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
         if ( $matches )
         {
           $finds = $matches[0];
@@ -482,7 +595,7 @@ class FH_Import_Data {
     echo '<pre>THEME DIR: ', print_r( $this->theme_dir, true ), '</pre>';
     echo '<pre>import PATH: ', print_r( $this->import_path, true ), '</pre>';
 
-    /* import Directory */
+    /* Import Directory */
     $import_basedir = $this->theme_dir . '/' . $this->import_path;
     echo '<pre>import DIR: ', print_r( $import_basedir, true ), '</pre>';
 
@@ -531,12 +644,13 @@ class FH_Import_Data {
       }
     }
 
-    /* Load Top Level ( Parent ) Posts First. */
+    /* Load Top Level Posts ( Parents ) First. */
     foreach ( $top_level_posts as $post_props )
     {
       $this->import_post( $post_props );
     }
 
+    /* Load Child Posts. */
     foreach ( $child_posts as $post_props )
     {
       $this->import_post( $post_props );
@@ -544,7 +658,12 @@ class FH_Import_Data {
 
     echo '<pre>POST IDS MAP: ', print_r( $this->post_ids_map, true ), '</pre>';
 
+    /* Replace site url and source post-ID references. */
     $this->migrate_content();
+
+
+    /* Import Nav Menu Items */
+    $this->import_nav_menus( $import_basedir );
 
   }
 
