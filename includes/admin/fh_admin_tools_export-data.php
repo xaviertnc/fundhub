@@ -20,8 +20,7 @@ class FH_Export_Data {
 
   function arg( $arr = null, $key = null, $default = null )
   {
-    if ( ! $arr ) { return; }
-    if ( ! $key ) { return $arr; }
+    if ( ! $arr or ! $key ) { return; }
     return isset( $arr[$key] ) ? $arr[$key] : $default;
   }
 
@@ -169,10 +168,10 @@ class FH_Export_Data {
       $export_item->post_parent = $item->post_parent;
       $export_item->menu_order = $item->menu_order;
       $export_item->menu_item_parent = $item->menu_item_parent;
-      $export_item->orig_object_id = $item->object_id;
+      $export_item->object_id = $item->object_id;
       $export_item->object = $item->object;
-      // $export_item->type = $item->type;
-      // $export_item->type_label = $item->type_label;
+      $export_item->type = $item->type;
+      $export_item->type_label = $item->type_label;
       $export_item->url = $item->url;
       $export_item->title = $item->title;
       $export_item->target = $item->target;
@@ -350,7 +349,8 @@ class FH_Export_Data {
       'siteurl'  => get_option( 'siteurl' ),
       'blogname' => get_option( 'blogname' ),
       'blogdescription' => get_option( 'blogdescription' ),
-      'upload_path' => get_option( 'upload_path' )
+      'upload_path' => get_option( 'upload_path' ),
+      'WPLANG' => get_option( 'WPLANG', 'en_ZA' )
     );
     if ( $this->create_folder( $options_basedir ) )
     {
@@ -390,7 +390,7 @@ class FH_Export_Data {
     {
       $nav_menu_items = wp_get_nav_menu_items( $nav_menu_term );
       $nav_menu_items = $this->map_menu_items( $nav_menu_items );
-      $nav_menus[ $nav_menu_term->name ] = $nav_menu_items;
+      $nav_menus[ $nav_menu_term->slug ] = $nav_menu_items;
     }
     if ( $this->create_folder( $nav_menus_basedir ) )
     {
@@ -425,7 +425,7 @@ class FH_Export_Data {
         $post->taxonomies = get_post_taxonomies( $post->post_id );
         $post->terms = wp_get_post_terms( $post->post_id, 'strategy' );
 
-        if ( $post_type == 'page' and $post_id == $this->page_on_front_id )
+        if ( $post_type == 'page' and $post->post_id == $this->page_on_front_id )
         {
           $post->is_frontpage = true;
         }
