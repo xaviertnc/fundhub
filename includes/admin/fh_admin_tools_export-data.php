@@ -111,8 +111,8 @@ class FH_Export_Data {
   function filter_post_metas( $post_metas )
   {
     return array_filter( $post_metas, function( $key ) {
-      return $key == '_thumbnail_id' or strpos( $key, '_' ) !== 0;
-    }, ARRAY_FILTER_USE_KEY );
+      return $key == '_thumbnail_id' or $key == '_wp_page_template' or
+        strpos( $key, '_' ) !== 0; }, ARRAY_FILTER_USE_KEY );
   }
 
 
@@ -122,7 +122,7 @@ class FH_Export_Data {
   }
 
 
-  function find_href_attachment_id( $file_href )
+  function find_attachment_by_href( $file_href )
   {
     global $wpdb;
     $sql = "SELECT `post_id` FROM {$wpdb->postmeta}
@@ -324,7 +324,7 @@ class FH_Export_Data {
           if ( $is_media_item )
           {
             $file_href = str_replace( $uploads_href, '', $raw_file_href );
-            $wp_attachment_id = $this->find_href_attachment_id( $file_href );
+            $wp_attachment_id = $this->find_attachment_by_href( $file_href );
             $wp_post_attachment = fh_find_object_by( $post->post_attachments,
               'post_id', $wp_attachment_id ) ? 1 : 0;
           }
