@@ -4,7 +4,8 @@ class FH_Export_Data {
 
   public $site_url = '';
   public $theme_dir = '';
-  public $export_path = 'content/export';
+  public $export_dir = '';
+  public $export_path = 'content' . DIRECTORY_SEPARATOR . 'export';
   public $page_on_front_id = 0;
   public $uploads_info = array();
 
@@ -22,6 +23,12 @@ class FH_Export_Data {
   {
     if ( ! $arr or ! $key ) { return; }
     return isset( $arr[$key] ) ? $arr[$key] : $default;
+  }
+
+
+  function fs_join( array $dir_parts, $postfix = null )
+  {
+    return implode( DIRECTORY_SEPARATOR, $dir_parts ) . $postfix;
   }
 
 
@@ -62,16 +69,15 @@ class FH_Export_Data {
   }
 
 
-  function get_post_type( $post_type = 'post', $status = null,
-    $parent = null, $limit = 999 )
+  function get_post_type( $post_type = 'post', $args = array() )
   {
-    $args = array(
+    $default_args = array(
       'post_type'   => $post_type,
-      'post_status' => $status, // null => any status
-      'post_parent' => $parent, // null => any parent
-      'numberposts' => $limit,
+      'post_status' => null, // null => default == 'publish'
+      'post_parent' => null, // null => any parent
+      'numberposts' => 999
     );
-    $posts = get_posts( $args );
+    $posts = get_posts( array_merge( $default_args, $args ) );
     return $posts;
   }
 
@@ -92,7 +98,7 @@ class FH_Export_Data {
         foreach ( $values_array ?: [] as $serialized_metas )
         {
           $metas = unserialize( $serialized_metas );
-          echo '<pre>add_post_metas:unserialized = ', print_r( $metas, true ), '</pre>';
+          //echo '<pre>add_post_metas:unserialized = ', print_r( $metas, true ), '</pre>';
           $metas[ 'image_meta' ] = array();
           $metas[ 'sizes' ] = array();
           //$serialized_metas = serialize( $metas );
@@ -118,21 +124,8 @@ class FH_Export_Data {
 
   function get_attached_media( $post )
   {
+    // Empty string as first param == All Mime Types
     return get_attached_media( '', $post->ID );
-  }
-
-
-  function find_attachment_by_href( $file_href )
-  {
-    global $wpdb;
-    $sql = "SELECT `post_id` FROM {$wpdb->postmeta}
-      WHERE `meta_key` = '_wp_attached_file' AND
-        `meta_value` = '{$file_href}'";
-    $results = $wpdb->get_results( $sql );
-    foreach ( $results?:[] as $result )
-    {
-      return $result->post_id;
-    }
   }
 
 
@@ -186,7 +179,7 @@ class FH_Export_Data {
   }
 
 
-  function map_post_attachments( $attachments, $unattached = false )
+  function map_attachments( $attachments, $not_my_children = false )
   {
     $export = array();
     foreach ( $attachments as $attachment )
@@ -198,7 +191,7 @@ class FH_Export_Data {
       $export_item->post_author = $attachment->post_author;
       $export_item->post_status = $attachment->post_status;
       $export_item->post_parent = $attachment->post_parent;
-      if ( $unattached and $attachment->post_parent > 0 )
+      if ( $not_my_children and $attachment->post_parent > 0 )
       {
         $parent_post = get_post( $attachment->post_parent );
         $export_item->post_parent_title = $parent_post
@@ -217,24 +210,19 @@ class FH_Export_Data {
   }
 
 
-  function map_post( $post )
+  function map_post_data( $post_data, $post )
   {
-    $export_item = new stdClass();
-    $export_item->post_id = $post->ID;
-    $export_item->post_guid = $post->guid;
-    $export_item->post_type = $post->post_type;
-    $export_item->post_author = $post->post_author;
-    $export_item->post_status = $post->post_status;
-    $export_item->post_parent = $post->post_parent;
-    $export_item->post_name = $post->post_name;
-    $export_item->post_title = $post->post_title;
-    $export_item->post_metas = $post->post_metas;
-    $export_item->post_files = $post->post_files;
-    $export_item->post_attachments = $post->post_attachments;
-    $export_item->other_attachments = $post->other_attachments;
-    $export_item->menu_order = $post->menu_order;
-    // $export_item->filter = $post->filter;
-    return $export_item;
+    $post_data->post_id = $post->ID;
+    $post_data->post_guid = $post->guid;
+    $post_data->post_type = $post->post_type;
+    $post_data->post_author = $post->post_author;
+    $post_data->post_status = $post->post_status;
+    $post_data->post_parent = $post->post_parent;
+    $post_data->post_name = $post->post_name;
+    $post_data->post_title = $post->post_title;
+    $post_data->menu_order = $post->menu_order;
+    // $post_data->filter = $post->filter;
+    return $post_data;
   }
 
 
@@ -324,8 +312,8 @@ class FH_Export_Data {
           if ( $is_media_item )
           {
             $file_href = str_replace( $uploads_href, '', $raw_file_href );
-            $wp_attachment_id = $this->find_attachment_by_href( $file_href );
-            $wp_post_attachment = fh_find_object_by( $post->post_attachments,
+            $wp_attachment_id = FH_Lib::find_attachment_id( $file_href );
+            $wp_post_attachment = FH_Lib::find_object_by( $post->post_attachments,
               'post_id', $wp_attachment_id ) ? 1 : 0;
           }
         }
@@ -343,7 +331,50 @@ class FH_Export_Data {
   }
 
 
-  function export_options( $options_basedir )
+  function export_widgets()
+  {
+    global $wpdb;
+    $sql = "SELECT option_name, option_value FROM $wpdb->options
+      WHERE option_name LIKE '%widget%'";
+    $options = $wpdb->get_results( $sql );
+    foreach ( $options?:array() as $option )
+    {
+      $option->option_value = unserialize( $option->option_value );
+    }
+    $widgets_basedir = $this->export_dir;
+    if ( $this->create_folder( $widgets_basedir ) )
+    {
+      $file_path = $widgets_basedir . '/widgets.json';
+      $this->save_as_json( $file_path, $options );
+    }
+  }
+
+
+  function export_theme_mods()
+  {
+    $theme_options = new stdClass();
+    $current_theme_slug = get_option( 'stylesheet' );
+    $mods_option_name = 'theme_mods_' . $current_theme_slug;
+    $theme_options->theme_mods_key = $mods_option_name;
+    $theme_mods = get_option( $mods_option_name );
+    echo '<pre>THEME MODS: ', print_r( $theme_mods, true ), '</pre>';
+    $theme_options->theme_mods = $theme_mods;
+    $theme_options->site_icon = get_option( 'site_icon' );
+    $theme_options->header_scripts = get_option( 'fh_header_scripts' );
+    $theme_options->noscripts = get_option( 'fh_noscripts' );
+    $theme_options->footer_scripts = get_option( 'fh_footer_scripts' );
+    $css_post_id = $this->arg( $theme_mods, 'custom_css_post_id' );
+    $theme_options->custom_css = $css_post_id ? get_post( $css_post_id ) : null;
+    $mods_basedir = $this->export_dir;
+    if ( $this->create_folder( $mods_basedir ) )
+    {
+      $file_path = $mods_basedir . '/theme.json';
+      $this->save_as_json( $file_path, $theme_options );
+    }
+  }
+
+
+  function export_options()
   {
     $options = array(
       'siteurl'  => get_option( 'siteurl' ),
@@ -352,6 +383,7 @@ class FH_Export_Data {
       'upload_path' => get_option( 'upload_path' ),
       'WPLANG' => get_option( 'WPLANG', 'en_ZA' )
     );
+    $options_basedir = $this->export_dir;
     if ( $this->create_folder( $options_basedir ) )
     {
       $file_path = $options_basedir . '/options.json';
@@ -360,7 +392,7 @@ class FH_Export_Data {
   }
 
 
-  function export_taxonomies( $taxonomy_basedir )
+  function export_taxonomies()
   {
 
     $taxonomies = get_taxonomies( array(), 'objects' );
@@ -370,9 +402,10 @@ class FH_Export_Data {
     {
       $taxonomy_terms = $this->get_taxonomy_terms( $taxonomy );
       $taxonomy_terms = $this->map_terms( $taxonomy_terms );
-      $taxonomy_terms = fh_sort_objects_by( $taxonomy_terms, 'name' );
+      $taxonomy_terms = FH_Lib::sort_objects_by( $taxonomy_terms, 'name' );
       $props->terms = $taxonomy_terms;
     }
+    $taxonomy_basedir = $this->export_dir;
     if ( $this->create_folder( $taxonomy_basedir ) )
     {
       $file_path = $taxonomy_basedir . '/taxonomies.json';
@@ -381,17 +414,18 @@ class FH_Export_Data {
   }
 
 
-  function export_nav_menus( $nav_menus_basedir )
+  function export_nav_menus()
   {
     $nav_menus = array();
     $nav_menu_terms = $this->get_taxonomy_terms( 'nav_menu' );
-    $nav_menu_terms = fh_sort_objects_by( $nav_menu_terms, 'name' );
+    $nav_menu_terms = FH_Lib::sort_objects_by( $nav_menu_terms, 'name' );
     foreach ( $nav_menu_terms as $nav_menu_term )
     {
       $nav_menu_items = wp_get_nav_menu_items( $nav_menu_term );
       $nav_menu_items = $this->map_menu_items( $nav_menu_items );
       $nav_menus[ $nav_menu_term->slug ] = $nav_menu_items;
     }
+    $nav_menus_basedir = $this->export_dir;
     if ( $this->create_folder( $nav_menus_basedir ) )
     {
       $this->save_as_json( $nav_menus_basedir . '/navmenus.json', $nav_menus );
@@ -399,75 +433,109 @@ class FH_Export_Data {
   }
 
 
-  function export_post_type( $post_type, $posts_basedir )
+  function export_attachment_files( $attachment_posts, $files_basedir )
   {
-    $posts = $this->get_post_type( $post_type, array( 'publish', 'private' ) );
+    foreach ( $attachment_posts?:array() as $attachment )
+    {
+      $attached_file = reset( $attachment->post_metas[ '_wp_attached_file' ] );
+      $rel_path = dirname( $attached_file );
+      $dir_parts = array( $files_basedir );
+      if ( $rel_path != '.' ) { $dir_parts[] = $rel_path; }
+      $target_dir = $this->fs_join( $dir_parts );
+      $uploas_url = $this->uploads_info[ 'baseurl' ];
+      if ( $this->create_folder( $target_dir ) )
+      {
+        $online_file_url =  "$uploas_url/$attached_file";
+        FH_Lib::copy_online_file( $online_file_url, $target_dir );
+      }
+    }
+  }
+
+
+  function export_general_media()
+  {
+    $dir_parts = array( $this->export_dir, 'unattached.json' );
+    $unattached_data_file = $this->fs_join( $dir_parts );
+
+    $unattached = $this->get_post_type( 'attachment', array( 'post_parent' => 0 ) );
+    $unattached = $this->add_post_metas( $unattached );
+    $unattached = $this->map_attachments( $unattached );
+    //echo '<pre>UNATTACHED MEDIA: ', print_r( $unattached, true ), '</pre>';
+
+    $this->save_as_json( $unattached_data_file, $unattached );
+
+    $dir_parts = array( $this->export_dir, 'unattached-media' );
+    $unattached_files_basedir = $this->fs_join( $dir_parts );
+
+    $this->export_attachment_files( $unattached, $unattached_files_basedir );
+  }
+
+
+  function export_post_type( $post_type, $opts = array(), $query = array() )
+  {
+    $posts_basedir = $this->arg( $opts, 'dir', $this->export_dir );
+
+    if ( empty( $query[ 'post_status' ] ) ) {
+      $query[ 'post_status' ] = array( 'publish', 'private' );
+    }
+
+    $posts = $this->get_post_type( $post_type, $query );
+
     if ( $posts and $this->create_folder( $posts_basedir ) )
     {
-      $posts = fh_sort_objects_by( $posts, 'menu_order', 'numeric' );
+
+      /* @TODO: Considder removing this line! Rather sort by query? */
+      // $posts = FH_Lib::sort_objects_by( $posts, 'menu_order', 'numeric' );
+
       foreach ( $posts as $post )
       {
-        $post_basedir = "{$posts_basedir}/{$post->post_name}";
+        $dir_parts = array( $posts_basedir, $post->post_name );
+        $post_basedir = $this->fs_join( $dir_parts );
 
         if ( ! $this->create_folder( $post_basedir ) ) { continue; }
 
-        $this->save_as_html( $post_basedir . '/content.html', $post->post_content );
+        /* Collect and Process Post / Page Data */
+        $post_data = new stdClass();
         $post_attachments = $this->get_attached_media( $post );
         $post_attachments = $this->add_post_metas( $post_attachments );
-        $post->post_attachments = $this->map_post_attachments( $post_attachments );
-        $post->post_files = $this->extract_files_from_content( $post, $this->uploads_info );
+        $post_data->post_attachments = $this->map_attachments( $post_attachments );
+        $post_data->post_files = $this->extract_files_from_content( $post, $this->uploads_info );
         $other_attachments = $this->get_unattached_media( $post->post_files );
         $other_attachments = $this->add_post_metas( $other_attachments );
-        $post->other_attachments = $this->map_post_attachments( $other_attachments, true );
-        $post->post_metas = get_post_meta( $post->ID );
-        $post->post_metas = $this->filter_post_metas( $post->post_metas );
-        $post = $this->map_post( $post );
-        $post->taxonomies = get_post_taxonomies( $post->post_id );
-        $post->terms = wp_get_post_terms( $post->post_id, 'strategy' );
-
-        if ( $post_type == 'page' and $post->post_id == $this->page_on_front_id )
+        $post_data->other_attachments = $this->map_attachments( $other_attachments, 'not-mine' );
+        $post_data->post_metas = get_post_meta( $post->ID );
+        $post_data->post_metas = $this->filter_post_metas( $post_data->post_metas );
+        $this->map_post_data( $post_data, $post );
+        $post_data->taxonomies = get_post_taxonomies( $post->ID );
+        /* @TODO: Only "strategy" terms. Expand to cover ALL taxonomy terms..? */
+        $post_data->terms = wp_get_post_terms( $post->ID, 'strategy' );
+        if ( $post_type == 'page' and $post->ID == $this->page_on_front_id )
         {
-          $post->is_frontpage = true;
+          $post_data->is_frontpage = true;
         }
 
-        $this->save_as_json( $post_basedir . '/post.json', $post );
+        /* Store Post Data */
+        $dir_parts = array( $post_basedir, 'post.json' );
+        $post_data_file = $this->fs_join( $dir_parts );
+        $this->save_as_json( $post_data_file, $post_data );
 
-        $files_basedir = $post_basedir . '/media';
-        //echo '<pre>files_basedir: ', print_r( $files_basedir, true ), '</pre>';
+        /* Store Post Content */
+        $dir_parts = array( $post_basedir, 'content.html' );
+        $content_file = $this->fs_join( $dir_parts );
+        $this->save_as_html( $content_file, $post->post_content );
 
-        if ( $this->create_folder( $files_basedir ) )
+        /* Store Post Attachment Files ( WP Media Files ) */
+        $dir_parts = array( $post_basedir, 'media' );
+        $post_files_basedir = $this->fs_join( $dir_parts );
+        if ( $this->create_folder( $post_files_basedir ) )
         {
-          if ( $post->post_attachments  )
-          {
-            foreach ( $post->post_attachments as $attachment )
-            {
-              $file = reset( $attachment->post_metas[ '_wp_attached_file' ] );
-              //echo '<pre>file: ', print_r( $file, true ), '</pre>';
-              $file_path = dirname( $file );
-              //echo '<pre>file_path: ', print_r( $file_path, true ), '</pre>';
-              $file_dir = $files_basedir . ( ($file_path != '.') ? '/' . $file_path : '' );
-              if ( $this->create_folder( $file_dir ) )
-              {
-                //echo '<pre>file_dir: ', print_r( $file_dir, true ), '</pre>';
-                //echo '<pre>from: ', print_r( $this->uploads_info[ 'baseurl' ] . '/' . $file, true ), '</pre>';
-                //echo '<pre>to: ', print_r( $file_dir . '/' . basename( $file ), true ), '</pre>';
-                fh_copy_file( $this->uploads_info[ 'baseurl' ] . '/' . $file, $file_dir );
-              }
-            }
-          }
-          if ( $post->other_attachments  )
-          {
-            foreach ( $post->other_attachments as $attachment )
-            {
-              $file = reset( $attachment->post_metas[ '_wp_attached_file' ] );
-              $file_path = dirname( $file );
-              $file_dir = $files_basedir . ( ($file_path != '.') ? '/' . $file_path : '' );
-              if ( $this->create_folder( $file_dir ) )
-              {
-                fh_copy_file( $this->uploads_info[ 'baseurl' ] . '/' . $file, $file_dir );
-              }
-            }
-          }
+          /* Copy Attached WP Media Files */
+          $this->export_attachment_files( $post_data->post_attachments, $post_files_basedir );
+          /* Copy Unattached WP Media Files */
+          $this->export_attachment_files( $post_data->other_attachments, $post_files_basedir );
+
+          // PS: Don't store files that's NOT on the domain host server.
+          //  i.e. External file links.
         }
       }
     }
@@ -485,12 +553,14 @@ class FH_Export_Data {
     echo '<pre>EXPORT PATH: ', print_r( $this->export_path, true ), '</pre>';
 
     /* Export Directory */
-    $export_basedir = $this->theme_dir . '/' . $this->export_path . '/';
-    $export_basedir .= 'export_' . time();
-    echo '<pre>EXPORT DIR: ', print_r( $export_basedir, true ), '</pre>';
+    $dir_parts = array( $this->theme_dir, $this->export_path, 'export_' . time() );
+    $this->export_dir = $this->fs_join( $dir_parts );
+    echo '<pre>EXPORT DIR: ', print_r( $this->export_dir, true ), '</pre>';
+
+    if ( ! $this->create_folder( $this->export_dir ) ) { return; }
 
     /* Uploads Info */
-    $this->uploads_info = wp_upload_dir();
+    $this->uploads_info = wp_get_upload_dir();
     $this->uploads_info[ 'uploads' ] = untrailingslashit( str_replace(
       trailingslashit( $this->site_url ), '', $this->uploads_info[ 'baseurl' ] ) );
     echo '<pre>UPLOADS INFO: ', print_r( $this->uploads_info, true ), '</pre>';
@@ -498,23 +568,37 @@ class FH_Export_Data {
     $this->page_on_front_id = get_option( 'page_on_front', 0 );
 
     /* Options */
-    $this->export_options( $export_basedir );
+    $this->export_options();
+
+    /* Widgets */
+    $this->export_widgets();
+
+    /* Theme Mods */
+    $this->export_theme_mods();
 
     /* Taxonomies */
-    $this->export_taxonomies( $export_basedir );
+    $this->export_taxonomies();
 
     /* Nav Menus */
-    $this->export_nav_menus( $export_basedir );
+    $this->export_nav_menus();
+
+    /* General Media Posts */
+    $this->export_general_media();
 
     /* Page Posts */
-    $this->export_post_type( 'page', "{$export_basedir}/page-posts" );
+    $dir = $this->fs_join( array( $this->export_dir, 'page-posts' ) );
+    $this->export_post_type( 'page', array( 'dir' => $dir ) );
 
     /* Asset Manager Posts */
-    $this->export_post_type( 'asset_manager', "{$export_basedir}/asm-posts" );
+    $dir = $this->fs_join( array( $this->export_dir, 'asm-posts' ) );
+    $query = array( 'orderby' => 'menu_order', 'order' => 'ASC' );
+    $this->export_post_type( 'asset_manager', array( 'dir' => $dir ), $query );
 
     /* Wp Block Posts */
-    $this->export_post_type( 'wp_block', "{$export_basedir}/wp-block-posts" );
-  }
+    $dir = $this->fs_join( array( $this->export_dir, 'wp-block-posts' ) );
+    $this->export_post_type( 'wp_block', array( 'dir' => $dir ) );
+
+  } // end: export_all
 
 } // end: FH_Export_Data
 
