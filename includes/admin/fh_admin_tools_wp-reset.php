@@ -32,6 +32,9 @@ class FH_Reset_WP {
     $do_delete_uploads  = ! empty( $_POST[ 'delete_uploads' ] );
     $confirmed_delete   = ! empty( $_POST[ 'confirm_delete_uploads' ] );
 
+    $current_theme = $active_theme->get_stylesheet();
+    $mods_option = 'theme_mods_' . strtolower( $current_theme );
+
     // save values that need to be restored after reset
     //$show_on_front = get_option( 'show_on_front' );
     //$page_on_front = get_option( 'page_on_front' );
@@ -41,7 +44,20 @@ class FH_Reset_WP {
     $blog_public = get_option( 'blog_public' ); // Discourage search engines (1 or 0)
     $wplang = get_option( 'WPLANG', 'en_ZA' );
     $siteurl = get_option( 'siteurl' );
+    $site_icon = get_option( 'site_icon' );
+    $theme_mods = get_option( $mods_option );
     $home = get_option( 'home' );
+
+    if ( $restore_theme )
+    {
+      $sql = "SELECT option_name, option_value FROM $wpdb->options
+        WHERE option_name LIKE '%widget%'";
+      $widget_options = $wpdb->get_results( $sql );
+      foreach ( $widget_options?:array() as $option )
+      {
+        $option->option_value = unserialize( $option->option_value );
+      }
+    }
 
     $active_plugins = get_option( 'active_plugins' );
     $active_theme = wp_get_theme();
@@ -115,11 +131,13 @@ class FH_Reset_WP {
 
     if ( $do_restore_theme )
     {
-      switch_theme( $active_theme->get_stylesheet() );
+      switch_theme( $current_theme );
       // set theme default options
       //update_option( 'show_on_front', $show_on_front, true );
       //update_option( 'page_for_posts', $page_for_posts, true );
       //update_option( 'page_on_front', $page_on_front, true );
+      update_option( 'site_icon', $site_icon, true );
+      update_option( $mods_option, $theme_mods, true );
       update_option( 'blogdescription', $blog_description, true );
       update_option( 'permalink_structure', '/%category%/%postname%/', true );
       update_option( 'uploads_use_yearmonth_folders', 0, true );
@@ -127,6 +145,10 @@ class FH_Reset_WP {
       update_option( 'upload_path', 'media', true );
       update_option( 'thumbnail_crop', 0, true );
       update_option( 'ping_sites', '', true );
+      foreach ( $widget_options?:array() as $w )
+      {
+        update_option( $w->option_name, $w->option_value, true );
+      }
     }
 
     // log out and log in
@@ -142,4 +164,4 @@ class FH_Reset_WP {
 }
 
 
-new FH_Reset_WP();
+new FH_Reset_WP;
