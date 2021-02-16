@@ -4,10 +4,11 @@ class FH_Import_Data {
 
   public $site_url = '';
   public $theme_dir = '';
-  public $orig_options = null;
+  public $import_dir = '';
   public $import_path = 'content/import';
   public $uploads_info = array();
   public $post_ids_map = array();
+  public $orig_options = null;
 
 
   function __construct( $site_url, $theme_dir, $import_path = null )
@@ -90,21 +91,21 @@ class FH_Import_Data {
   function list_files_relative( $root_dir )
   {
     $files = new RecursiveIteratorIterator(
-    new RecursiveDirectoryIterator( $root_dir ),
-    RecursiveIteratorIterator::LEAVES_ONLY
-  );
-  $relative_paths = array();
-  $rel_offset = strlen( $root_dir ) + 1;
-  foreach ( $files as $name => $file )
-  {
-      if ( ! $file->isDir() )
-      {
-    $file_path = $file->getRealPath();
-        $relative_path = substr( $file_path, $rel_offset );
-        $relative_paths[] = $relative_path;
-      }
-  }
-  return $relative_paths;
+      new RecursiveDirectoryIterator( $root_dir ),
+      RecursiveIteratorIterator::LEAVES_ONLY
+    );
+    $relative_paths = array();
+    $rel_offset = strlen( $root_dir ) + 1;
+    foreach ( $files as $name => $file )
+    {
+        if ( ! $file->isDir() )
+        {
+      $file_path = $file->getRealPath();
+          $relative_path = substr( $file_path, $rel_offset );
+          $relative_paths[] = $relative_path;
+        }
+    }
+    return $relative_paths;
   }
 
 
@@ -115,6 +116,91 @@ class FH_Import_Data {
     $post_id = $wpdb->get_var( $wpdb->prepare( $sql , $post_title, $post_type ) );
     echo '<pre>get_post_by_title: post_id = ', print_r( $post_id, true ), '</pre>';
     return $post_id ? get_post( $post_id, $output ) : null;
+  }
+
+
+  function migrate_urls( $content, $is_json_string = false )
+  {
+    $replace_url = $this->orig_options->siteurl;
+    $with_url = $this->site_url;
+    if ( $is_json_string )
+    {
+      $replace_url = str_replace( '/', '\\/', $replace_url );
+      $with_url = str_replace( '/', '\\/', $with_url );
+    }
+    $output = str_replace( $replace_url, $with_url, $content );
+    //echo '<pre>Migrate output = ', print_r( $output, true ), '</pre>';
+    return $output;
+  }
+
+
+  function migrate_post_content()
+  {
+    foreach ( $this->post_ids_map as $orig_post_id => $new_post_id )
+    {
+      $post = get_post( $new_post_id );
+      if ( $post )
+      {
+        //echo '<pre>migrate_content:orig_post_id = ', print_r( $orig_post_id, true ), '</pre>';
+        //echo '<pre>migrate_content:new_post_id = ', print_r( $new_post_id, true ), '</pre>';
+        $content = $this->migrate_urls( $post->post_content );
+        if ( empty( $content ) ) { continue; }
+        preg_match_all( '/{"ref":(\d+)}/', $content, $matches );
+        //echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
+        if ( $matches )
+        {
+          $finds = $matches[0];
+          $ids = $matches[1];
+          $replaces = array();
+          foreach( $ids as $orig_id )
+          {
+            $new_id = $this->arg( $this->post_ids_map, $orig_id );
+            if ( $new_id ) { $replaces[] = '{"ref":' . $new_id . '}'; }
+          }
+          $content = str_replace( $finds, $replaces, $content );
+        }
+        preg_match_all( '/image {"id":(\d+)/', $content, $matches );
+        //echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
+        if ( $matches )
+        {
+          $finds = $matches[0];
+          $ids = $matches[1];
+          $replaces = array();
+          foreach( $ids as $orig_id )
+          {
+            $new_id = $this->arg( $this->post_ids_map, $orig_id );
+            if ( $new_id ) { $replaces[] = 'image {"id":' . $new_id; }
+          }
+          $content = str_replace( $finds, $replaces, $content );
+        }
+        preg_match_all( '/wp-image-(\d+)/', $content, $matches );
+        //echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
+        if ( $matches )
+        {
+          $finds = $matches[0];
+          $ids = $matches[1];
+          $replaces = array();
+          foreach( $ids as $orig_id )
+          {
+            $new_id = $this->arg( $this->post_ids_map, $orig_id );
+            if ( $new_id ) { $replaces[] = 'wp-image-' . $new_id; }
+          }
+          $content = str_replace( $finds, $replaces, $content );
+        }
+        $post_id = wp_update_post( array(
+          'ID' => $new_post_id,
+          'post_content' => $content
+        ), false );
+        if ( is_wp_error( $post_id ))
+        {
+          $errors = $post_id->get_error_messages();
+          foreach ( $errors as $error )
+          {
+            echo '<pre>migrate_content:error =', $error, '</pre>';
+          }
+        }
+      }
+    }
   }
 
 
@@ -160,11 +246,75 @@ class FH_Import_Data {
   }
 
 
-  function import_taxonomies( $taxonomies )
+  function import_options()
   {
+    echo '<pre>import_options:start... </pre>';
+    $options_json = file_get_contents( "$this->import_dir/options.json" );
+    $this->orig_options = json_decode( $options_json );
+    echo '<pre>ORIG WP OPTIONS: ', print_r( $this->orig_options, true ), '</pre>';
+  }
+
+
+  function import_theme_options()
+  {
+    echo '<pre>import_theme_options:start... </pre>';
+    $theme_options_json = file_get_contents( "$this->import_dir/theme.json" );
+    $theme_options = json_decode( $theme_options_json );
+    echo '<pre>THEME OPTIONS: ', print_r( $theme_options, true ), '</pre>';
+    if ( ! $theme_options ) { return; }
+    if ( isset( $theme_options->theme_mods ) )
+    {
+      $theme_mods = $theme_options->theme_mods;
+      echo '<pre>THEME MODS: ', print_r( $theme_mods, true ), '</pre>';
+      // update_option( $theme_options->theme_mods_key, $theme_mods );
+    }
+    if ( isset( $theme_options->site_icon ) )
+    {
+      $icon_post_id = $theme_options->site_icon;
+      echo '<pre>SITE ICON POST ID: ', print_r( $icon_post_id, true ), '</pre>';
+      // update_option( 'site_icon' => $icon_post_id );
+    }
+  }
+
+
+  function delete_widget_options()
+  {
+    global $wpdb;
+    echo '<pre>delete_widget_options... </pre>';
+    $widget_opt_names = $wpdb->get_col( "SELECT option_name FROM $wpdb->options
+      WHERE option_name LIKE '%widget%'" );
+    foreach ( $widget_opt_names as $option_name )
+    {
+      echo '<pre>delete: ', print_r( $option_name, true), '</pre>';
+      delete_option( $option_name );
+    }
+  }
+
+
+  function import_widgets()
+  {
+    echo '<pre>import_widgets:start... </pre>';
+    $widgets_json = file_get_contents( "$this->import_dir/widgets.json" );
+    $widgets_json = $this->migrate_urls( $widgets_json, true );
+    $widget_options = json_decode( $widgets_json, true );
+    if ( ! $widget_options ) { return; }
+    $this->delete_widget_options();
+    foreach ( $widget_options?:array() as $w )
+    {
+      echo '<pre>widget:name = ', print_r( $w[ 'option_name' ], true ), '</pre>';
+      echo '<pre>widget:value = ', print_r( $w[ 'option_value' ], true ), '</pre>';
+      update_option( $w[ 'option_name' ], $w[ 'option_value' ], true );
+    }
+  }
+
+
+  function import_taxonomies()
+  {
+    $taxonomies_json = file_get_contents( "$this->import_dir/taxonomies.json" );
+    $taxonomies = json_decode( $taxonomies_json );
     // echo '<pre>import_taxonomies: ', print_r( $taxonomies, true ), '</pre>';
     $taxonomy_names = array_keys( (array) $taxonomies );
-    echo '<pre>import_taxonomies: ', print_r( $taxonomy_names, true ), '</pre>';
+    //echo '<pre>import_taxonomies: ', print_r( $taxonomy_names, true ), '</pre>';
     foreach ( (array) $taxonomies as $taxonomy_name => $taxonomy )
     {
       /**
@@ -173,7 +323,7 @@ class FH_Import_Data {
        */
       foreach ( $taxonomy->terms as $term )
       {
-        echo '<pre>term: ', print_r( $term->name, true ), '</pre>';
+        //echo '<pre>term: ', print_r( $term->name, true ), '</pre>';
         $args = array('slug' => $term->slug );
         if ( $term->description ) { $args[ 'description' ] = $term->description; }
         if ( $term->parent > 0 ) { $args[ 'parent' ] = $term->parent; }
@@ -209,9 +359,9 @@ class FH_Import_Data {
       'menu-item-title'       => $item->title,
       'menu-item-url'         => $item->url ? $this->migrate_urls( $item->url ): ''
     );
-    echo '<pre>ADD MENU-', $menu_id, ' ITEM: ', print_r( $args, true ), '</pre>';
+    //echo '<pre>ADD MENU-', $menu_id, ' ITEM: ', print_r( $args, true ), '</pre>';
     $item_post_id = wp_update_nav_menu_item( $menu_id, 0, $args );
-    echo '<pre>ITEM ID: ', print_r( $item_post_id, true ), '</pre>';
+    //echo '<pre>ITEM ID: ', print_r( $item_post_id, true ), '</pre>';
     if ( is_wp_error( $item_post_id ) ) { return; }
     foreach ( $item->children?:[] as $child_item )
     {
@@ -220,9 +370,9 @@ class FH_Import_Data {
   }
 
 
-  function import_nav_menus( $nav_menus_basedir )
+  function import_nav_menus()
   {
-    $navmenus_json = file_get_contents( "$nav_menus_basedir/navmenus.json" );
+    $navmenus_json = file_get_contents( "$this->import_dir/navmenus.json" );
     $navmenus = json_decode( $navmenus_json );
     if ( $navmenus ) { $navmenus = (array) $navmenus; } else { return; }
     $menu_locations_map = array();
@@ -232,9 +382,9 @@ class FH_Import_Data {
       $menu_id = $menu_obj->term_id;
       $this->delete_menu_items( $menu_id );
       $menu_locations_map[ $menu ] = $menu_id;
-      echo '<pre>NAV MENU ', $menu, ': ', print_r( $menu_obj, true ), '</pre>';
+      //echo '<pre>NAV MENU ', $menu, ': ', print_r( $menu_obj, true ), '</pre>';
       $tree = $this->tree_array( $menu_items, 'post_id', 'menu_item_parent' );
-      echo '<pre>ITEMS TREE: ', print_r( $tree, true ), '</pre>';
+      //echo '<pre>ITEMS TREE: ', print_r( $tree, true ), '</pre>';
       foreach ( $tree as $item )
       {
         $this->add_menuitem_recursive( $menu_id, $item );
@@ -244,6 +394,57 @@ class FH_Import_Data {
     {
       set_theme_mod( 'nav_menu_locations', $menu_locations_map );
     }
+  }
+
+
+  function import_posts()
+  {
+    $post_type_dirs = glob( $this->import_dir . '/*' , GLOB_ONLYDIR );
+    echo '<pre>POST TYPE DIRS: ', print_r( $post_type_dirs, true ), '</pre>';
+
+    $post_dirs = array();
+
+    foreach( $post_type_dirs as $post_type_dir )
+    {
+      $type_dirs = glob( "$post_type_dir/*" , GLOB_ONLYDIR );
+      $post_dirs = array_merge( $post_dirs, $type_dirs );
+    }
+
+    echo '<pre>POST DIRS: ', print_r( $post_dirs, true ), '</pre>';
+
+    $top_level_posts = array();
+    $child_posts = array();
+
+    foreach ( $post_dirs as $post_dir )
+    {
+      $post_props = $this->load_post_props( $post_dir );
+      if ( ! $post_props ) { continue; }
+      if ( $post_props->post_parent > 0 )
+      {
+        $child_posts[] = $post_props;
+      }
+      else
+      {
+        $top_level_posts[] = $post_props;
+      }
+    }
+
+    /* Load Top Level Posts ( Parents ) First. */
+    foreach ( $top_level_posts as $post_props )
+    {
+      $this->import_post( $post_props );
+    }
+
+    /* Load Child Posts. */
+    foreach ( $child_posts as $post_props )
+    {
+      $this->import_post( $post_props );
+    }
+
+    echo '<pre>POST IDS MAP: ', print_r( $this->post_ids_map, true ), '</pre>';
+
+    /* Replace site url and source post-ID references. */
+    $this->migrate_post_content();
   }
 
 
@@ -510,161 +711,42 @@ class FH_Import_Data {
   }
 
 
-  function migrate_urls( $content )
-  {
-    return str_replace($this->orig_options->siteurl, $this->site_url, $content );
-  }
-
-
-  function migrate_content()
-  {
-    foreach ( $this->post_ids_map as $orig_post_id => $new_post_id )
-    {
-      $post = get_post( $new_post_id );
-      if ( $post )
-      {
-        //echo '<pre>migrate_content:orig_post_id = ', print_r( $orig_post_id, true ), '</pre>';
-        //echo '<pre>migrate_content:new_post_id = ', print_r( $new_post_id, true ), '</pre>';
-        $content = $this->migrate_urls( $post->post_content );
-        preg_match_all( '/{"ref":(\d+)}/', $content, $matches );
-        //echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
-        if ( $matches )
-        {
-          $finds = $matches[0];
-          $ids = $matches[1];
-          $replaces = array();
-          foreach( $ids as $orig_id )
-          {
-            $new_id = $this->arg( $this->post_ids_map, $orig_id );
-            if ( $new_id ) { $replaces[] = '{"ref":' . $new_id . '}'; }
-          }
-          $content = str_replace( $finds, $replaces, $content );
-        }
-        preg_match_all( '/image {"id":(\d+)/', $content, $matches );
-        //echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
-        if ( $matches )
-        {
-          $finds = $matches[0];
-          $ids = $matches[1];
-          $replaces = array();
-          foreach( $ids as $orig_id )
-          {
-            $new_id = $this->arg( $this->post_ids_map, $orig_id );
-            if ( $new_id ) { $replaces[] = 'image {"id":' . $new_id; }
-          }
-          $content = str_replace( $finds, $replaces, $content );
-        }
-        preg_match_all( '/wp-image-(\d+)/', $content, $matches );
-        //echo '<pre>migrate_content:matches = ', print_r( $matches, true ), '</pre>';
-        if ( $matches )
-        {
-          $finds = $matches[0];
-          $ids = $matches[1];
-          $replaces = array();
-          foreach( $ids as $orig_id )
-          {
-            $new_id = $this->arg( $this->post_ids_map, $orig_id );
-            if ( $new_id ) { $replaces[] = 'wp-image-' . $new_id; }
-          }
-          $content = str_replace( $finds, $replaces, $content );
-        }
-        $post_id = wp_update_post( array(
-          'ID' => $new_post_id,
-          'post_content' => $content
-        ), false );
-        if ( is_wp_error( $post_id ))
-        {
-          $errors = $post_id->get_error_messages();
-          foreach ( $errors as $error )
-          {
-            echo '<pre>migrate_content:error =', $error, '</pre>';
-          }
-        }
-      }
-    }
-  }
-
-
   function import_all()
   {
     // echo '<pre>REQUEST: ', print_r( $_REQUEST, true ), '</pre>';
-
     check_admin_referer( 'fh_nonce' );
 
     echo '<pre>SITE URL: ', print_r( $this->site_url, true ), '</pre>';
     echo '<pre>THEME DIR: ', print_r( $this->theme_dir, true ), '</pre>';
-    echo '<pre>import PATH: ', print_r( $this->import_path, true ), '</pre>';
-
-    /* Import Directory */
-    $import_basedir = $this->theme_dir . '/' . $this->import_path;
-    echo '<pre>import DIR: ', print_r( $import_basedir, true ), '</pre>';
-
-    /* Source WP Options */
-    $options_json = file_get_contents( "$import_basedir/options.json" );
-    $this->orig_options = json_decode( $options_json );
-    echo '<pre>ORIG WP OPTIONS: ', print_r( $this->orig_options, true ), '</pre>';
-
-    /* Taxonomies */
-    $taxonomies_json = file_get_contents( "$import_basedir/taxonomies.json" );
-    $this->import_taxonomies( json_decode( $taxonomies_json ) );
+    echo '<pre>IMPORT PATH: ', print_r( $this->import_path, true ), '</pre>';
 
     /* Uploads Info */
-    $this->uploads_info = wp_upload_dir();
+    $this->uploads_info = wp_get_upload_dir();
     $this->uploads_info[ 'uploads' ] = untrailingslashit( str_replace(
       trailingslashit( $this->site_url ), '', $this->uploads_info[ 'baseurl' ] ) );
     echo '<pre>UPLOADS INFO: ', print_r( $this->uploads_info, true ), '</pre>';
 
-    $post_type_dirs = glob( $import_basedir . '/*' , GLOB_ONLYDIR );
-    echo '<pre>POST TYPE DIRS: ', print_r( $post_type_dirs, true ), '</pre>';
+    /* Import Directory */
+    $this->import_dir = $this->theme_dir . '/' . $this->import_path;
+    echo '<pre>IMPORT DIR: ', print_r( $import_dir, true ), '</pre>';
 
-    $post_dirs = array();
+    /* WP Options */
+    $this->import_options();
 
-    foreach( $post_type_dirs as $post_type_dir )
-    {
-      $type_dirs = glob( "$post_type_dir/*" , GLOB_ONLYDIR );
-      $post_dirs = array_merge( $post_dirs, $type_dirs );
-    }
+    /* Taxonomies */
+    $this->import_taxonomies();
 
-    echo '<pre>POST DIRS: ', print_r( $post_dirs, true ), '</pre>';
+    /* Posts */
+    $this->import_posts();
 
-    $top_level_posts = array();
-    $child_posts = array();
+    /* Nav Menu Items */
+    $this->import_nav_menus();
 
-    foreach ( $post_dirs as $post_dir )
-    {
-      $post_props = $this->load_post_props( $post_dir );
-      if ( ! $post_props ) { continue; }
-      if ( $post_props->post_parent > 0 )
-      {
-        $child_posts[] = $post_props;
-      }
-      else
-      {
-        $top_level_posts[] = $post_props;
-      }
-    }
+    /* Theme Options */
+    $this->import_theme_options();
 
-    /* Load Top Level Posts ( Parents ) First. */
-    foreach ( $top_level_posts as $post_props )
-    {
-      $this->import_post( $post_props );
-    }
-
-    /* Load Child Posts. */
-    foreach ( $child_posts as $post_props )
-    {
-      $this->import_post( $post_props );
-    }
-
-    echo '<pre>POST IDS MAP: ', print_r( $this->post_ids_map, true ), '</pre>';
-
-    /* Replace site url and source post-ID references. */
-    $this->migrate_content();
-
-
-    /* Import Nav Menu Items */
-    $this->import_nav_menus( $import_basedir );
-
+    /* Widgets */
+    $this->import_widgets();
   }
 
 } // end: FH_Import_Data
@@ -674,7 +756,6 @@ new FH_Import_Data( SITE_URL, THEME_DIR );
 
 
 // ---
-
 
 // echo '<pre>file_path: ', print_r( $file_path, true ), '</pre>';
 // echo '<pre>relative_path: ', print_r( $relative_path, true ), '</pre>';
