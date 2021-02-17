@@ -378,10 +378,16 @@ class FH_Export_Data {
   {
     $options = array(
       'siteurl'  => get_option( 'siteurl' ),
+      'home'  => get_option( 'home' ),
       'blogname' => get_option( 'blogname' ),
       'blogdescription' => get_option( 'blogdescription' ),
       'upload_path' => get_option( 'upload_path' ),
-      'WPLANG' => get_option( 'WPLANG', 'en_ZA' )
+      'WPLANG' => get_option( 'WPLANG', 'en_ZA' ),
+      'permalink_structure' => get_option( 'permalink_structure' ),
+      'uploads_use_yearmonth_folders' => get_option( 'uploads_use_yearmonth_folders' ),
+      'wp_page_for_privacy_policy' => get_option( 'wp_page_for_privacy_policy' ),
+      'thumbnail_crop' => get_option( 'thumbnail_crop' ),
+      'ping_sites' => get_option( 'ping_sites' )
     );
     $options_basedir = $this->export_dir;
     if ( $this->create_folder( $options_basedir ) )
