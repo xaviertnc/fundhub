@@ -251,6 +251,11 @@ class FH_Import_Data {
     echo '<pre>import_options:start... </pre>';
     $options_json = file_get_contents( "$this->import_dir/options.json" );
     $this->orig_options = json_decode( $options_json );
+    foreach ( $this->orig_options as $option_name => $option_value )
+    {
+      if ( in_array( $option_name, array( 'siteurl', 'home' ) ) ) { continue; }
+      update_option( $option_name, $option_value );
+    }
     echo '<pre>ORIG WP OPTIONS: ', print_r( $this->orig_options, true ), '</pre>';
   }
 
@@ -397,9 +402,25 @@ class FH_Import_Data {
   }
 
 
+  function import_unattached_media()
+  {
+    $unattached_json = file_get_contents( "$this->import_dir/unattached.json" );
+    $media_dir = "$this->import_dir/unattached-media";
+    $unattached = json_decode( $unattached_json );
+    foreach ( $unattached as $attachment )
+    {
+      $new_attachment_id = $this->import_attachment( $attachment, $media_dir );
+      echo '<pre>import_unattached_media:new_attachment_id = ',
+        print_r( $new_attachment_id, true ), '</pre>';
+    }
+  }
+
+
   function import_posts()
   {
     $post_type_dirs = glob( $this->import_dir . '/*' , GLOB_ONLYDIR );
+    unset( $post_type_dirs[ 'unattached-media' ] );
+
     echo '<pre>POST TYPE DIRS: ', print_r( $post_type_dirs, true ), '</pre>';
 
     $post_dirs = array();
@@ -537,6 +558,114 @@ class FH_Import_Data {
   }
 
 
+  function import_attachment( $attachment, $media_dir, $orig_parent_post_id = -1 )
+  {
+    // echo '<pre>import_attachment:orig_parent_post_id = ',
+    //     print_r( $orig_parent_post_id, true ), '</pre>';
+    // echo '<pre>import_attachment:attachment = ',
+    //     print_r( $attachment, true ), '</pre>';
+    $att_metas = null;
+    $file_path_rel = null;
+    $post_title = $attachment->post_title;
+    $att_is_not_child = $attachment->post_parent != $orig_parent_post_id;
+    $existing_attachment = $this->get_post_by_title( $post_title, 'attachment' );
+    $map_att_type = empty( $existing_attachment ) ? 'insert' : 'update';
+    $mapped_att_props = $this->map_post_props( $attachment, $map_att_type );
+    $parent_post_id = $this->arg( $this->post_ids_map, $attachment->post_parent, 0 );
+    // if ( $orig_parent_post_id and ! $parent_post_id ) { return; }
+    $mapped_att_props->post_parent = $parent_post_id;
+    // echo '<pre>import_attachment:props = ',
+    //     print_r( $mapped_att_props, true ), '</pre>';
+    // echo '<pre>import_attachment:attachment->post_id = ',
+    //     print_r( $attachment->post_id, true ), '</pre>';
+    // Get Attacment Image Metas
+    if ( isset( $mapped_att_props->att_metas ) )
+    {
+      $att_metas = $mapped_att_props->att_metas;
+      unset( $mapped_att_props->att_metas );
+    }
+    // Get Attacment Image File
+    if ( isset( $mapped_att_props->file ) )
+    {
+      $file_path_rel = $mapped_att_props->file;
+      unset( $mapped_att_props->file );
+    }
+    if ( $att_is_not_child )
+    {
+      // echo '<pre>import_attachment:attachment->post_parent = ',
+      //   print_r( $attachment->post_parent, true ), '</pre>';
+      // echo '<pre>import_attachment:post_ids_map = ',
+      //   print_r( $this->post_ids_map, true ), '</pre>';
+      $att_parent_post = ( $attachment->post_parent > 0 )
+        ? $this->get_post_by_title( $attachment->post_parent_title,
+           $attachment->post_parent_type )
+        : null;
+       $mapped_att_props->post_parent = $att_parent_post
+         ? $att_parent_post->ID : 0;
+    }
+    // INSERT Attachment
+    if ( $map_att_type == 'insert' )
+    {
+      $mapped_att_props->post_type = 'attachment';
+      $result = wp_insert_post( $mapped_att_props, 'wp_error:true' );
+      echo '<pre>import_attachment:INSERT result = ',
+        print_r( $result, true ), '</pre>';
+    }
+    // UPDATE Attachment
+    else /* $map_att_type == 'update' */
+    {
+      $mapped_att_props->ID = $existing_attachment->ID;
+      $result = wp_update_post( $mapped_att_props, 'wp_error:true' );
+      echo '<pre>import_attachment:UPDATE result = ',
+        print_r( $result, true ), '</pre>';
+    }
+    if ( is_wp_error( $result ) )
+    {
+      $errors = $result->get_error_messages();
+      foreach ( $errors as $error )
+      {
+        echo '<pre>import_attachment:error =', $error, '</pre>';
+      }
+      return;
+    }
+
+    $new_attachment_id = $result;
+
+    /* Set attachment post metas */
+    if ( $att_metas )
+    {
+      // echo '<pre>import_attachment:att_metas = ',
+      //   print_r( $att_metas, true ), '</pre>';
+      wp_update_attachment_metadata( $new_attachment_id, (array) $att_metas );
+    }
+
+    /* Copy the attachment file to uploads folder */
+    if ( $file_path_rel )
+    {
+      $imports_path = $media_dir . '/' . $file_path_rel;
+      $uploads_path = $this->uploads_info[ 'path' ] . '/' . $file_path_rel;
+      echo '<pre>import_attachment:imports_file_path = ',
+        print_r( $imports_path, true ), '</pre>';
+      echo '<pre>import_attachment:uploads_file_path = ',
+        print_r( $uploads_path, true ), '</pre>';
+      if ( !file_exists( $uploads_path ) and file_exists( $imports_path ) )
+      {
+        wp_mkdir_p( dirname( $uploads_path ) ); // @return true == Dir exists
+        echo @copy( $imports_path, $uploads_path )
+          ? '<pre>import_attachment:copy_file = OK</pre>'
+          : '<pre>import_attachment:copy_file = FAILED</pre>';
+      }
+      else
+      {
+        echo '<pre>import_attachment:copy_file = SKIP</pre>';
+      }
+    }
+
+    $this->post_ids_map[ $attachment->post_id ] = $new_attachment_id;
+    return $new_attachment_id;
+  }
+
+
   function import_post( $post_props )
   {
     $loaded_data = $this->load_post_data( $post_props );
@@ -544,21 +673,25 @@ class FH_Import_Data {
     $post_title = $loaded_data->props->post_title;
     $existing_post = $this->get_post_by_title( $post_title , $post_type );
 
-    echo '<pre>import_post:import_data = ',
-      print_r( $loaded_data, true ), '</pre>';
+    // echo '<pre>import_post:import_data = ',
+    //   print_r( $loaded_data, true ), '</pre>';
 
-    $thumbnail_id = null;
+    $orig_parent_thumbnail_id = null;
     $orig_parent_post_id = $loaded_data->props->post_id;
     $map_post_type = empty( $existing_post ) ? 'insert' : 'update';
     $mapped_props = $this->map_post_props( $loaded_data->props, $map_post_type );
-    echo '<pre>import_post:mapped_props = ', print_r( $mapped_props, true ), '</pre>';
+
+    // echo '<pre>import_post:mapped_props = ',
+    //   print_r( $mapped_props, true ), '</pre>';
 
     if ( isset( $mapped_props->thumbnail_id ) )
     {
-      $thumbnail_id = $mapped_props->thumbnail_id;
+      $orig_parent_thumbnail_id = $mapped_props->thumbnail_id;
       unset( $mapped_props->thumbnail_id );
     }
+
     $mapped_props->post_content = $loaded_data->content;
+
     if ( $map_post_type == 'insert' )
     {
       if ( $mapped_props->post_parent > 0 )
@@ -566,26 +699,30 @@ class FH_Import_Data {
         $mapped_props->post_parent = $this->arg(
           $this->post_ids_map, $mapped_props->post_parent, 0 );
       }
-      $post_id = wp_insert_post( $mapped_props, 'wp_error:true' );
+      $result = wp_insert_post( $mapped_props, 'wp_error:true' );
       echo '<pre>import_post:INSERT Result = ',
-        print_r( $post_id, true ), '</pre>';
+        print_r( $result, true ), '</pre>';
+      $post_id = $result;
     }
     else /* map_post_type == 'update' */
     {
-      $mapped_props->ID = $existing_post->ID;
-      $post_id = wp_update_post( $mapped_props, 'wp_error:true' );
+      $post_id = $existing_post->ID;
+      $mapped_props->ID = $post_id;
+      $result = wp_update_post( $mapped_props, 'wp_error:true' );
       echo '<pre>import_post:UPDATE Result = ',
-        print_r( $post_id, true ), '</pre>';
+        print_r( $result, true ), '</pre>';
     }
-    if ( is_wp_error( $post_id ) )
+
+    if ( is_wp_error( $result ) )
     {
-      $errors = $post_id->get_error_messages();
-      foreach ( $errors as $error )
-      {
+      $errors = $result->get_error_messages();
+      foreach ( $errors as $error ) {
         echo '<pre>import_post:error =', $error, '</pre>';
       }
       return;
     }
+
+    $this->post_ids_map[ $orig_parent_post_id ] = $post_id;
 
     if ( isset( $loaded_data->props->is_frontpage ) )
     {
@@ -594,6 +731,7 @@ class FH_Import_Data {
     }
 
     /* Assign Strategies */
+    /* @TODO: What about other possibe taxonomies? */
     if ( $post_type == 'asset_manager' )
     {
       $terms = $loaded_data->props->terms?:[];
@@ -602,7 +740,6 @@ class FH_Import_Data {
     }
 
     $parent_post_id = $post_id;
-    $this->post_ids_map[ $orig_parent_post_id ] = $parent_post_id;
 
     $index_attachments = array_merge(
       $loaded_data->props->post_attachments,
@@ -611,101 +748,21 @@ class FH_Import_Data {
 
     foreach ( $index_attachments as $attachment )
     {
-      $file_path_rel = null;
-      $post_title = $attachment->post_title;
-      $att_is_thumbnail = ( $attachment->post_id == $thumbnail_id );
-      $att_is_not_child = $attachment->post_parent != $orig_parent_post_id;
-      $existing_attachment = $this->get_post_by_title( $post_title, 'attachment' );
-      $map_att_type = empty( $existing_attachment ) ? 'insert' : 'update';
-      $mapped_att_props = $this->map_post_props( $attachment, $map_att_type );
-      $mapped_att_props->post_parent = $parent_post_id;
-      echo '<pre>import_post_attachment:props = ',
-          print_r( $mapped_att_props, true ), '</pre>';
-      echo '<pre>import_post_attachment:attachment->post_id = ',
-          print_r( $attachment->post_id, true ), '</pre>';
-      echo '<pre>import_post_attachment:thumbnail_id = ',
-          print_r( $thumbnail_id, true ), '</pre>';
-      // Get Attacment Image Metas
-      if ( isset( $mapped_att_props->att_metas ) )
-      {
-        $att_metas = $mapped_att_props->att_metas;
-        unset( $mapped_att_props->att_metas );
-      }
-      // Get Attacment Image File
-      if ( isset( $mapped_att_props->file ) )
-      {
-        $file_path_rel = $mapped_att_props->file;
-        unset( $mapped_att_props->file );
-      }
-      if ( $att_is_not_child )
-      {
-        $att_parent_post = ( $attachment->post_parent > 0 )
-          ? $this->get_post_by_title($attachment->post_parent_title,
-             $attachment->post_parent_type )
-          : null;
-         $mapped_att_props->post_parent = $att_parent_post
-           ? $att_parent_post->ID : 0;
-      }
-      // INSERT Attachment
-      if ( $map_att_type == 'insert' )
-      {
-        $mapped_att_props->post_type = 'attachment';
-        $result = wp_insert_post( $mapped_att_props, 'wp_error:true' );
-        echo '<pre>import_post_attachment:INSERT new_attachment_id = ',
-          print_r( $result, true ), '</pre>';
-      }
-      // UPDATE Attachment
-      else /* $map_att_type == 'update' */
-      {
-        $mapped_att_props->ID = $existing_attachment->ID;
-        $result = wp_update_post( $mapped_att_props, 'wp_error:true' );
-        echo '<pre>import_post_attachment:UPDATE attachment_id = ',
-          print_r( $result, true ), '</pre>';
-      }
-      if ( is_wp_error( $result ) )
-      {
-        $errors = $result->get_error_messages();
-        foreach ( $errors as $error )
-        {
-          echo '<pre>import_post_attachment:error =', $error, '</pre>';
-        }
-        continue;
-      }
-      $new_attachment_id = $result;
-      $this->post_ids_map[ $attachment->post_id ] = $new_attachment_id;
+      $new_attachment_id = $this->import_attachment( $attachment,
+        $loaded_data->media_dir, $orig_parent_post_id );
 
-      if ( $att_metas )
-      {
-        echo '<pre>import_post_attachment:att_metas = ',
-          print_r( $att_metas, true ), '</pre>';
-        wp_update_attachment_metadata( $new_attachment_id, (array) $att_metas );
-      }
+      echo '<pre>import_post:new_attachment_id = ',
+        print_r( $new_attachment_id, true ), '</pre>';
+
+      if ( ! $new_attachment_id ) { continue; }
+
       // Set the parent post thumbnail ID if this attachment is it's thumnail.
+      $att_is_thumbnail = ( $attachment->post_id == $orig_parent_thumbnail_id );
+      echo '<pre>import_post_attachment:orig_parent_thumbnail_id = ',
+        print_r( $orig_parent_thumbnail_id, true ), '</pre>';
       if ( $att_is_thumbnail )
       {
         update_post_meta( $parent_post_id, '_thumbnail_id', $new_attachment_id );
-        echo '<pre>import_post:SET_THUMBNAIL_ID = ',
-          print_r( $new_attachment_id, true ), '</pre>';
-      }
-      if ( $file_path_rel )
-      {
-        $imports_path = $loaded_data->media_dir . '/' . $file_path_rel;
-        $uploads_path = $this->uploads_info[ 'path' ] . '/' . $file_path_rel;
-        echo '<pre>import_post:imports_file_path = ',
-          print_r( $imports_path, true ), '</pre>';
-        echo '<pre>import_post:uploads_file_path = ',
-          print_r( $uploads_path, true ), '</pre>';
-        if ( !file_exists( $uploads_path ) and file_exists( $imports_path ) )
-        {
-          wp_mkdir_p( dirname( $uploads_path ) ); // @return true == Dir exists
-          echo @copy( $imports_path, $uploads_path )
-            ? '<pre>import_post:copy_file = OK</pre>'
-            : '<pre>import_post:copy_file = FAILED</pre>';
-        }
-        else
-        {
-          echo '<pre>import_post:copy_file = SKIP</pre>';
-        }
       }
     }
   }
@@ -728,13 +785,16 @@ class FH_Import_Data {
 
     /* Import Directory */
     $this->import_dir = $this->theme_dir . '/' . $this->import_path;
-    echo '<pre>IMPORT DIR: ', print_r( $import_dir, true ), '</pre>';
+    echo '<pre>IMPORT DIR: ', print_r( $this->import_dir, true ), '</pre>';
 
     /* WP Options */
     $this->import_options();
 
     /* Taxonomies */
     $this->import_taxonomies();
+
+    /* Unattached Media */
+    $this->import_unattached_media();
 
     /* Posts */
     $this->import_posts();
