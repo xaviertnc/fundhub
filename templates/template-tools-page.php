@@ -16,15 +16,22 @@
 </form>
 <br>
 <form action="<?=esc_url( admin_url( 'admin-post.php' ) )?>" method="post">
-    <?=$nonce_field?>
-    <input type="hidden" name="action" value="fh_export_data">
-    <?=submit_button( 'Export Data' )?>
+  <h2>Export / Backup Data</h2>
+  <?=$nonce_field?>
+  <input type="hidden" name="action" value="fh_export_data">
+  <?=submit_button( 'Export Data' )?>
 </form>
 <br>
 <form action="<?=esc_url( admin_url( 'admin-post.php' ) )?>" method="post">
-    <?=$nonce_field?>
-    <input type="hidden" name="action" value="fh_import_data">
-    <?=submit_button( 'Import Data' )?>
+  <h2>Restore / Import Data</h2>
+  <p><label><input type="checkbox" name="import_pages" checked> Import Pages</label></p>
+  <p><label><input type="checkbox" name="import_asm_posts" checked> Import Asset Manager Posts</label></p>
+  <p><label><input type="checkbox" name="import_options" checked> Import Wordpress Settings</label></p>
+  <p><label><input type="checkbox" name="import_theme" checked> Import Theme Settings</label></p>
+  <p><label><input type="checkbox" name="import_blogname" checked> Import Site Name</label></p>
+  <?=$nonce_field?>
+  <input type="hidden" name="action" value="fh_import_data">
+  <?=submit_button( 'Import Data' )?>
 </form>
 <script>
   var elDelUploads = document.getElementById('delete_uploads');
