@@ -114,7 +114,7 @@ class FH_Import_Data {
     global $wpdb;
     $sql = "SELECT ID FROM $wpdb->posts WHERE post_title = %s AND post_type= %s";
     $post_id = $wpdb->get_var( $wpdb->prepare( $sql , $post_title, $post_type ) );
-    echo '<pre>get_post_by_title: post_id = ', print_r( $post_id, true ), '</pre>';
+    // echo '<pre>get_post_by_title: post_id = ', print_r( $post_id, true ), '</pre>';
     return $post_id ? get_post( $post_id, $output ) : null;
   }
 
@@ -256,7 +256,7 @@ class FH_Import_Data {
       if ( in_array( $option_name, array( 'siteurl', 'home' ) ) ) { continue; }
       update_option( $option_name, $option_value );
     }
-    echo '<pre>ORIG WP OPTIONS: ', print_r( $this->orig_options, true ), '</pre>';
+    // echo '<pre>ORIG WP OPTIONS: ', print_r( $this->orig_options, true ), '</pre>';
   }
 
 
@@ -265,19 +265,54 @@ class FH_Import_Data {
     echo '<pre>import_theme_options:start... </pre>';
     $theme_options_json = file_get_contents( "$this->import_dir/theme.json" );
     $theme_options = json_decode( $theme_options_json );
-    echo '<pre>THEME OPTIONS: ', print_r( $theme_options, true ), '</pre>';
+    // echo '<pre>THEME OPTIONS: ', print_r( $theme_options, true ), '</pre>';
     if ( ! $theme_options ) { return; }
     if ( isset( $theme_options->theme_mods ) )
     {
       $theme_mods = $theme_options->theme_mods;
-      echo '<pre>THEME MODS: ', print_r( $theme_mods, true ), '</pre>';
-      // update_option( $theme_options->theme_mods_key, $theme_mods );
+      // echo '<pre>THEME MODS: ', print_r( $theme_mods, true ), '</pre>';
+      $logo_post_id = isset( $theme_mods->custom_logo ) ? $theme_mods->custom_logo : null;
+      // echo '<pre>ORIG SITE LOGO POST ID: ', print_r( $logo_post_id, true ), '</pre>';
+      $current_mods = get_option( $theme_options->theme_mods_key );
+      // echo '<pre>CURRENT MODS: ', print_r( $current_mods, true ), '</pre>';
+      if ( isset( $this->post_ids_map[ $logo_post_id ] ) ) {
+        $current_mods[ 'custom_logo' ] = $this->post_ids_map[ $logo_post_id ];
+      }
+      update_option( $theme_options->theme_mods_key, $current_mods );
     }
     if ( isset( $theme_options->site_icon ) )
     {
-      $icon_post_id = $theme_options->site_icon;
-      echo '<pre>SITE ICON POST ID: ', print_r( $icon_post_id, true ), '</pre>';
-      // update_option( 'site_icon' => $icon_post_id );
+      $orig_site_icon_id = $theme_options->site_icon;
+      // echo '<pre>ORIG SITE ICON POST ID: ', print_r( $orig_site_icon_id, true ), '</pre>';
+      if ( isset( $this->post_ids_map[ $orig_site_icon_id ] ) ) {
+        $site_icon_id = $this->post_ids_map[ $orig_site_icon_id ];
+        update_option( 'site_icon', $site_icon_id );
+      }
+    }
+    if ( isset( $theme_options->header_scripts ) )
+    {
+      $scripts = $theme_options->header_scripts;
+      // echo '<pre>HEADER SCRIPTS: ', htmlentities( $scripts ), '</pre>';
+      update_option( 'fh_header_scripts', $scripts );
+    }
+    if ( isset( $theme_options->noscripts ) )
+    {
+      $noscripts = $theme_options->noscripts;
+      // echo '<pre>NO SCRIPTS: ', htmlentities( $noscripts ), '</pre>';
+      update_option( 'fh_noscripts', $noscripts );
+    }
+    if ( isset( $theme_options->footer_scripts ) )
+    {
+      $scripts = $theme_options->footer_scripts;
+      // echo '<pre>FOOTER SCRIPTS: ', htmlentities( $scripts ), '</pre>';
+      update_option( 'fh_footer_scripts', $scripts );
+    }
+    if ( isset( $theme_options->custom_css ) )
+    {
+      $css = $theme_options->custom_css->post_content;
+      // $css = $this->migrate_urls( $css );
+      // echo '<pre>CUSTOM CSS: ', htmlentities( $css ), '</pre>';
+      wp_update_custom_css_post( $css );
     }
   }
 
@@ -290,7 +325,7 @@ class FH_Import_Data {
       WHERE option_name LIKE '%widget%'" );
     foreach ( $widget_opt_names as $option_name )
     {
-      echo '<pre>delete: ', print_r( $option_name, true), '</pre>';
+      // echo '<pre>delete: ', print_r( $option_name, true), '</pre>';
       delete_option( $option_name );
     }
   }
@@ -306,8 +341,8 @@ class FH_Import_Data {
     $this->delete_widget_options();
     foreach ( $widget_options?:array() as $w )
     {
-      echo '<pre>widget:name = ', print_r( $w[ 'option_name' ], true ), '</pre>';
-      echo '<pre>widget:value = ', print_r( $w[ 'option_value' ], true ), '</pre>';
+      // echo '<pre>widget:name = ', print_r( $w[ 'option_name' ], true ), '</pre>';
+      // echo '<pre>widget:value = ', print_r( $w[ 'option_value' ], true ), '</pre>';
       update_option( $w[ 'option_name' ], $w[ 'option_value' ], true );
     }
   }
@@ -315,6 +350,7 @@ class FH_Import_Data {
 
   function import_taxonomies()
   {
+    echo '<pre>import_taxonomies:start... </pre>';
     $taxonomies_json = file_get_contents( "$this->import_dir/taxonomies.json" );
     $taxonomies = json_decode( $taxonomies_json );
     // echo '<pre>import_taxonomies: ', print_r( $taxonomies, true ), '</pre>';
@@ -341,6 +377,7 @@ class FH_Import_Data {
   function delete_menu_items( $menu_id )
   {
     global $wpdb;
+    echo '<pre>delete_menu_items:start... menu = ', $menu_id, '</pre>';
     $menu_items = wp_get_nav_menu_items( $menu_id );
     // echo '<pre>DELETE MENU ITEMS menu-', $menu_id, ': ', print_r( $menu_items, true ), '</pre>';
     foreach ( (array) $menu_items as $menu_item ) { wp_delete_post( $menu_item->ID, true ); }
@@ -377,6 +414,7 @@ class FH_Import_Data {
 
   function import_nav_menus()
   {
+    echo '<pre>import_nav_menus:start... </pre>';
     $navmenus_json = file_get_contents( "$this->import_dir/navmenus.json" );
     $navmenus = json_decode( $navmenus_json );
     if ( $navmenus ) { $navmenus = (array) $navmenus; } else { return; }
@@ -404,22 +442,26 @@ class FH_Import_Data {
 
   function import_unattached_media()
   {
+    echo '<pre>import_unattached_media:start... </pre>';
     $unattached_json = file_get_contents( "$this->import_dir/unattached.json" );
     $media_dir = "$this->import_dir/unattached-media";
     $unattached = json_decode( $unattached_json );
     foreach ( $unattached as $attachment )
     {
       $new_attachment_id = $this->import_attachment( $attachment, $media_dir );
-      echo '<pre>import_unattached_media:new_attachment_id = ',
-        print_r( $new_attachment_id, true ), '</pre>';
+      // echo '<pre>import_unattached_media:new_attachment_id = ',
+      //   print_r( $new_attachment_id, true ), '</pre>';
     }
   }
 
 
   function import_posts()
   {
+    echo '<pre>import_posts:start... </pre>';
+
     $post_type_dirs = glob( $this->import_dir . '/*' , GLOB_ONLYDIR );
-    unset( $post_type_dirs[ 'unattached-media' ] );
+    $post_type_dirs = array_filter( $post_type_dirs, function( $dir ) {
+      return strpos( $dir, 'unattached' ) === FALSE; } );
 
     echo '<pre>POST TYPE DIRS: ', print_r( $post_type_dirs, true ), '</pre>';
 
@@ -461,8 +503,6 @@ class FH_Import_Data {
     {
       $this->import_post( $post_props );
     }
-
-    echo '<pre>POST IDS MAP: ', print_r( $this->post_ids_map, true ), '</pre>';
 
     /* Replace site url and source post-ID references. */
     $this->migrate_post_content();
@@ -534,7 +574,7 @@ class FH_Import_Data {
       ? (array) $loaded_props->post_metas : array();
     $meta_input = array_map( function( $v ){ return is_array( $v )
       ? reset( $v ) : $v; }, $post_metas );
-    echo '<pre>meta_input = ', print_r( $meta_input, true ), '</pre>';
+    // echo '<pre>meta_input = ', print_r( $meta_input, true ), '</pre>';
     if ( $meta_input )
     {
       if ( isset( $meta_input[ '_wp_attached_file' ] ) )
@@ -608,16 +648,14 @@ class FH_Import_Data {
     {
       $mapped_att_props->post_type = 'attachment';
       $result = wp_insert_post( $mapped_att_props, 'wp_error:true' );
-      echo '<pre>import_attachment:INSERT result = ',
-        print_r( $result, true ), '</pre>';
+      echo '<pre>INSERT attachment: ', print_r( $result, true ), '</pre>';
     }
     // UPDATE Attachment
     else /* $map_att_type == 'update' */
     {
       $mapped_att_props->ID = $existing_attachment->ID;
       $result = wp_update_post( $mapped_att_props, 'wp_error:true' );
-      echo '<pre>import_attachment:UPDATE result = ',
-        print_r( $result, true ), '</pre>';
+      echo '<pre>UPDATE attachment: ', print_r( $result, true ), '</pre>';
     }
     if ( is_wp_error( $result ) )
     {
@@ -644,20 +682,20 @@ class FH_Import_Data {
     {
       $imports_path = $media_dir . '/' . $file_path_rel;
       $uploads_path = $this->uploads_info[ 'path' ] . '/' . $file_path_rel;
-      echo '<pre>import_attachment:imports_file_path = ',
-        print_r( $imports_path, true ), '</pre>';
-      echo '<pre>import_attachment:uploads_file_path = ',
-        print_r( $uploads_path, true ), '</pre>';
+      // echo '<pre>import_attachment:imports_file_path = ',
+      //   print_r( $imports_path, true ), '</pre>';
+      // echo '<pre>import_attachment:uploads_file_path = ',
+      //   print_r( $uploads_path, true ), '</pre>';
       if ( !file_exists( $uploads_path ) and file_exists( $imports_path ) )
       {
         wp_mkdir_p( dirname( $uploads_path ) ); // @return true == Dir exists
         echo @copy( $imports_path, $uploads_path )
-          ? '<pre>import_attachment:copy_file = OK</pre>'
-          : '<pre>import_attachment:copy_file = FAILED</pre>';
+          ? '<pre>Copy attachment ' . $new_attachment_id . ' file: OK</pre>'
+          : '<pre>Copy attachment ' . $new_attachment_id . ' file: FAIL</pre>';
       }
       else
       {
-        echo '<pre>import_attachment:copy_file = SKIP</pre>';
+        echo '<pre>Copy attachment ', $new_attachment_id, ' file: SKIP</pre>';
       }
     }
 
@@ -700,8 +738,7 @@ class FH_Import_Data {
           $this->post_ids_map, $mapped_props->post_parent, 0 );
       }
       $result = wp_insert_post( $mapped_props, 'wp_error:true' );
-      echo '<pre>import_post:INSERT Result = ',
-        print_r( $result, true ), '</pre>';
+      echo '<pre>INSERT POST: ', print_r( $result, true ), '</pre>';
       $post_id = $result;
     }
     else /* map_post_type == 'update' */
@@ -709,15 +746,14 @@ class FH_Import_Data {
       $post_id = $existing_post->ID;
       $mapped_props->ID = $post_id;
       $result = wp_update_post( $mapped_props, 'wp_error:true' );
-      echo '<pre>import_post:UPDATE Result = ',
-        print_r( $result, true ), '</pre>';
+      echo '<pre>UPDATE POST: ', print_r( $result, true ), '</pre>';
     }
 
     if ( is_wp_error( $result ) )
     {
       $errors = $result->get_error_messages();
       foreach ( $errors as $error ) {
-        echo '<pre>import_post:error =', $error, '</pre>';
+        echo '<pre>import_post:error = ', $error, '</pre>';
       }
       return;
     }
@@ -751,15 +787,15 @@ class FH_Import_Data {
       $new_attachment_id = $this->import_attachment( $attachment,
         $loaded_data->media_dir, $orig_parent_post_id );
 
-      echo '<pre>import_post:new_attachment_id = ',
-        print_r( $new_attachment_id, true ), '</pre>';
+      // echo '<pre>import_post:new_attachment_id = ',
+      //   print_r( $new_attachment_id, true ), '</pre>';
 
       if ( ! $new_attachment_id ) { continue; }
 
       // Set the parent post thumbnail ID if this attachment is it's thumnail.
       $att_is_thumbnail = ( $attachment->post_id == $orig_parent_thumbnail_id );
-      echo '<pre>import_post_attachment:orig_parent_thumbnail_id = ',
-        print_r( $orig_parent_thumbnail_id, true ), '</pre>';
+      // echo '<pre>import_post_attachment:orig_parent_thumbnail_id = ',
+      //   print_r( $orig_parent_thumbnail_id, true ), '</pre>';
       if ( $att_is_thumbnail )
       {
         update_post_meta( $parent_post_id, '_thumbnail_id', $new_attachment_id );
@@ -807,6 +843,8 @@ class FH_Import_Data {
 
     /* Widgets */
     $this->import_widgets();
+
+    echo '<pre>POST IDS MAP: ', print_r( $this->post_ids_map, true ), '</pre>';
   }
 
 } // end: FH_Import_Data
