@@ -23,8 +23,11 @@ class FH_Reset_WP {
     // make sure the function is available to us
     if ( ! function_exists( 'wp_install' ) )
     {
-      require ABSPATH . '/wp-admin/includes/upgrade.php';
+      require ABSPATH . 'wp-admin/includes/upgrade.php';
     }
+
+    // echo '<pre>FH_Reset_WP:ABSPATH = ', print_r( ABSPATH, true ), '</pre>';
+    // echo '<pre>FH_Reset_WP:POST = ', print_r( $_POST, true ), '</pre>';
 
     $do_clear_content   = ! empty( $_POST[ 'clear_content' ] );
     $do_restore_plugins = ! empty( $_POST[ 'restore_plugins' ] );
@@ -32,7 +35,7 @@ class FH_Reset_WP {
     $do_delete_uploads  = ! empty( $_POST[ 'delete_uploads' ] );
     $confirmed_delete   = ! empty( $_POST[ 'confirm_delete_uploads' ] );
 
-    $current_theme = $active_theme->get_stylesheet();
+    $current_theme = get_option( 'stylesheet' );
     $mods_option = 'theme_mods_' . strtolower( $current_theme );
 
     // save values that need to be restored after reset
@@ -46,9 +49,10 @@ class FH_Reset_WP {
     $siteurl = get_option( 'siteurl' );
     $site_icon = get_option( 'site_icon' );
     $theme_mods = get_option( $mods_option );
+    $uploads_dir = ABSPATH . get_option( 'upload_path' );
     $home = get_option( 'home' );
 
-    if ( $restore_theme )
+    if ( $do_restore_theme )
     {
       $sql = "SELECT option_name, option_value FROM $wpdb->options
         WHERE option_name LIKE '%widget%'";
@@ -113,12 +117,13 @@ class FH_Reset_WP {
       }
     }
 
-    if ( $do_delete_uploads and $confirmed_delete )
+    // echo '<pre>FH_Reset_WP:Delete Media! uploads_dir = ',
+    //   print_r( $uploads_dir, true ), '</pre>';
+
+    if ( $uploads_dir and $do_delete_uploads and $confirmed_delete )
     {
-      $uploads_info = wp_get_upload_dir();
-      $base_dir = uploads_info[ 'basedir' ];
       FH_Lib::$delete_count = 0;
-      FH_Lib::delete_dir( $base_dir, $base_dir );
+      FH_Lib::delete_dir( $uploads_dir, $uploads_dir );
     }
 
     if ( $do_restore_plugins )
@@ -151,7 +156,7 @@ class FH_Reset_WP {
       }
     }
 
-    // log out and log in
+    // Log out and log in
     wp_clear_auth_cookie();
     wp_set_auth_cookie( $user_id );
 
