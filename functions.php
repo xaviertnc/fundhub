@@ -12,6 +12,7 @@
  */
 
 define( 'IS_ADMIN'  , is_admin() );
+define( 'LOGGED_IN' , is_user_logged_in() );
 
 define( 'SITE_URL'  , site_url() );
 define( 'SITE_NAME' , get_bloginfo( 'name' ) );
@@ -147,7 +148,7 @@ if ( IS_ADMIN )
 else /* IS_FRONT */
 {
     include FH_INCLUDES . '/fh_render_dynamic-blocks.php';
-    include FH_INCLUDES . '/fh_render_shortcode_multisite-post.php';
+    include FH_INCLUDES . '/fh_render_shortcode_multisite-content.php';
 
     function fh_enqueue_scripts()
     {
