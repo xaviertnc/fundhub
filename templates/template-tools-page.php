@@ -26,9 +26,10 @@
   <h2>Restore / Import Data</h2>
   <p><label><input type="checkbox" name="import_pages" checked> Import Pages</label></p>
   <p><label><input type="checkbox" name="import_asm_posts" checked> Import Asset Manager Posts</label></p>
+  <p><label><input type="checkbox" name="use_shortcodes"> Import Content As Multisite-Content Short-Code</label></p>
   <p><label><input type="checkbox" name="import_options" checked> Import Wordpress Settings</label></p>
   <p><label><input type="checkbox" name="import_theme" checked> Import Theme Settings</label></p>
-  <p><label><input type="checkbox" name="import_blogname" checked> Import Site Name</label></p>
+  <p><label><input type="checkbox" name="import_blogname"> Import Site Name</label></p>
   <?=$nonce_field?>
   <input type="hidden" name="action" value="fh_import_data">
   <?=submit_button( 'Import Data' )?>

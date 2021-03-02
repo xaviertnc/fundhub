@@ -9,6 +9,7 @@ class FH_Import_Data {
   public $uploads_info = array();
   public $post_ids_map = array();
   public $orig_options = null;
+  public $current_user_id = null;
 
 
   function __construct( $site_url, $theme_dir, $import_path = null )
@@ -121,14 +122,24 @@ class FH_Import_Data {
 
   function migrate_urls( $content, $is_json_string = false )
   {
-    $replace_url = $this->orig_options->siteurl;
-    $with_url = $this->site_url;
+    $replace_urls = array(
+      $this->orig_options->siteurl . '/' . $this->orig_options->upload_path,
+      $this->orig_options->siteurl
+    );
+    $with_urls = array(
+      $this->uploads_info[ 'baseurl' ],
+      $this->site_url
+    );
     if ( $is_json_string )
     {
-      $replace_url = str_replace( '/', '\\/', $replace_url );
-      $with_url = str_replace( '/', '\\/', $with_url );
+      $replace_urls = array_map( function( $url ) {
+        return str_replace( '/', '\\/', $url );
+      }, $replace_urls );
+      $with_urls = array_map( function( $url ) {
+        return str_replace( '/', '\\/', $url );
+      }, $with_urls );
     }
-    $output = str_replace( $replace_url, $with_url, $content );
+    $output = str_replace( $replace_urls, $with_urls, $content );
     //echo '<pre>Migrate output = ', print_r( $output, true ), '</pre>';
     return $output;
   }
@@ -246,17 +257,28 @@ class FH_Import_Data {
   }
 
 
-  function import_options()
+  function import_wp_options( $options = array() )
   {
-    echo '<pre>import_options:start... </pre>';
+    echo '<pre>import_wp_options:start... </pre>';
     $options_json = file_get_contents( "$this->import_dir/options.json" );
     $this->orig_options = json_decode( $options_json );
-    foreach ( $this->orig_options as $option_name => $option_value )
+    $skip_list = array( 'siteurl', 'home' );
+    if ( $this->arg( $options, 'import_blogname' ) == 'no' )
     {
-      if ( in_array( $option_name, array( 'siteurl', 'home' ) ) ) { continue; }
-      update_option( $option_name, $option_value );
+      $skip_list[] = 'blogname';
+      $skip_list[] = 'blogdescription';
     }
-    // echo '<pre>ORIG WP OPTIONS: ', print_r( $this->orig_options, true ), '</pre>';
+    echo '<pre>OPTIONS: ', print_r( $options, true ), '</pre>';
+    echo '<pre>SKIP LIST: ', print_r( $skip_list, true ), '</pre>';
+    foreach ( $this->orig_options as $key => $value )
+    {
+      echo '<pre>WP OPTION: ', $key, ' = ', print_r( $value, true ), '</pre>';
+      if ( ! in_array( $key,  $skip_list ) )
+      {
+        update_option( $key, $value );
+      }
+    }
+    echo '<pre>ORIG WP OPTIONS: ', print_r( $this->orig_options, true ), '</pre>';
   }
 
 
@@ -443,7 +465,7 @@ class FH_Import_Data {
   function import_unattached_media()
   {
     echo '<pre>import_unattached_media:start... </pre>';
-    $unattached_json = file_get_contents( "$this->import_dir/unattached.json" );
+    $unattached_json = file_get_contents( "$this->import_dir/unattached-media.json" );
     $media_dir = "$this->import_dir/unattached-media";
     $unattached = json_decode( $unattached_json );
     foreach ( $unattached as $attachment )
@@ -455,7 +477,7 @@ class FH_Import_Data {
   }
 
 
-  function import_posts()
+  function import_posts( $options = array() )
   {
     echo '<pre>import_posts:start... </pre>';
 
@@ -475,6 +497,8 @@ class FH_Import_Data {
 
     echo '<pre>POST DIRS: ', print_r( $post_dirs, true ), '</pre>';
 
+    $use_shortcodes = $this->arg( $options, 'use_shortcodes' ) == 'yes';
+
     $top_level_posts = array();
     $child_posts = array();
 
@@ -492,16 +516,18 @@ class FH_Import_Data {
       }
     }
 
+    //echo '<pre>TOP LEVEL POSTS: ', print_r( $top_level_posts, true ), '</pre>';
+
     /* Load Top Level Posts ( Parents ) First. */
     foreach ( $top_level_posts as $post_props )
     {
-      $this->import_post( $post_props );
+      $this->import_post( $post_props, $use_shortcodes );
     }
 
     /* Load Child Posts. */
     foreach ( $child_posts as $post_props )
     {
-      $this->import_post( $post_props );
+      $this->import_post( $post_props, $use_shortcodes );
     }
 
     /* Replace site url and source post-ID references. */
@@ -540,18 +566,19 @@ class FH_Import_Data {
     {
       $mapped_props->post_name = $loaded_props->post_name;
       $mapped_props->post_title = $loaded_props->post_title;
-      $mapped_props->post_author = $loaded_props->post_author;
       $mapped_props->post_parent = $loaded_props->post_parent;
-      if ( isset( $loaded_props->post_type ) )
-      {
-        $mapped_props->post_type = $loaded_props->post_type;
-      }
+      $post_author = isset( $loaded_props->post_author )
+        ? $loaded_props->post_author : $this->current_user_id;
+      $mapped_props->post_author = $post_author;
     }
 
-    if ( isset( $loaded_props->post_status ) )
-    {
-      $mapped_props->post_status = $loaded_props->post_status;
-    }
+    $post_type = isset( $loaded_props->post_type )
+      ? $loaded_props->post_type : 'post';
+    $mapped_props->post_type = $post_type;
+
+    $mapped_props->post_status = isset( $loaded_props->post_status )
+      ? $loaded_props->post_status
+      : ( $post_type == 'attachment' ? 'inherit' : 'publish' );
 
     if ( isset( $loaded_props->menu_order ) )
     {
@@ -704,7 +731,7 @@ class FH_Import_Data {
   }
 
 
-  function import_post( $post_props )
+  function import_post( $post_props, $use_shortcodes = false )
   {
     $loaded_data = $this->load_post_data( $post_props );
     $post_type = $loaded_data->props->post_type;
@@ -728,7 +755,16 @@ class FH_Import_Data {
       unset( $mapped_props->thumbnail_id );
     }
 
-    $mapped_props->post_content = $loaded_data->content;
+    if ( $use_shortcodes )
+    {
+      $mapped_props->post_content = '<!-- wp:shortcode -->' . PHP_EOL .
+        '[multisite-content blog=1 post=' . $loaded_data->props->post_id .
+        ']' . PHP_EOL . '<!-- /wp:shortcode -->' . PHP_EOL;
+    }
+    else
+    {
+      $mapped_props->post_content = $loaded_data->content;
+    }
 
     if ( $map_post_type == 'insert' )
     {
@@ -766,12 +802,14 @@ class FH_Import_Data {
       update_option( 'page_on_front', $post_id, true );
     }
 
-    /* Assign Strategies */
-    /* @TODO: What about other possibe taxonomies? */
-    if ( $post_type == 'asset_manager' )
+    /* Assign strategies if we're not importing a white label site */
+    /* @TODO: What about other possible taxonomies? */
+    if ( $post_type == 'asset_manager' and ! $use_shortcodes )
     {
       $terms = $loaded_data->props->terms?:[];
       $strategy_term_names = $this->extract_term_names( 'strategy', $terms );
+      /* NOTE: This function propably replaces all existing strategies. So watch
+       * out if you're importing over a custom white-label strategies stack! */
       wp_set_post_terms( $post_id, $strategy_term_names, 'strategy', false );
     }
 
@@ -784,6 +822,11 @@ class FH_Import_Data {
 
     foreach ( $index_attachments as $attachment )
     {
+      $att_is_thumbnail = ( $attachment->post_id == $orig_parent_thumbnail_id );
+
+      /* Only import thumbnails if we are using short-codes */
+      if ( $use_shortcodes and ! $att_is_thumbnail and ! $att_is_logo ) { continue; }
+
       $new_attachment_id = $this->import_attachment( $attachment,
         $loaded_data->media_dir, $orig_parent_post_id );
 
@@ -793,7 +836,6 @@ class FH_Import_Data {
       if ( ! $new_attachment_id ) { continue; }
 
       // Set the parent post thumbnail ID if this attachment is it's thumnail.
-      $att_is_thumbnail = ( $attachment->post_id == $orig_parent_thumbnail_id );
       // echo '<pre>import_post_attachment:orig_parent_thumbnail_id = ',
       //   print_r( $orig_parent_thumbnail_id, true ), '</pre>';
       if ( $att_is_thumbnail )
@@ -813,6 +855,8 @@ class FH_Import_Data {
     echo '<pre>THEME DIR: ', print_r( $this->theme_dir, true ), '</pre>';
     echo '<pre>IMPORT PATH: ', print_r( $this->import_path, true ), '</pre>';
 
+    $this->current_user_id = get_current_user_id();
+
     /* Uploads Info */
     $this->uploads_info = wp_get_upload_dir();
     $this->uploads_info[ 'uploads' ] = untrailingslashit( str_replace(
@@ -823,8 +867,13 @@ class FH_Import_Data {
     $this->import_dir = $this->theme_dir . '/' . $this->import_path;
     echo '<pre>IMPORT DIR: ', print_r( $this->import_dir, true ), '</pre>';
 
+    $import_options = array(
+      'import_blogname' => empty( $_POST[ 'import_blogname' ] ) ? 'no' : 'yes',
+      'use_shortcodes' => empty( $_POST[ 'use_shortcodes' ] ) ? 'no' : 'yes'
+    );
+
     /* WP Options */
-    $this->import_options();
+    $this->import_wp_options( $import_options );
 
     /* Taxonomies */
     $this->import_taxonomies();
@@ -833,7 +882,7 @@ class FH_Import_Data {
     $this->import_unattached_media();
 
     /* Posts */
-    $this->import_posts();
+    $this->import_posts( $import_options );
 
     /* Nav Menu Items */
     $this->import_nav_menus();
