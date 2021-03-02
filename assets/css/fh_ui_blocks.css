@@ -38,24 +38,34 @@
   list-style: none;
   margin: 0 0 3em;
   padding: 0;
+  display: flex;
+  flex-wrap: wrap;
 }
 
 .strategies-block a {
   color: inherit;
   display: block;
-  padding: 2px 1em 3px;
+  padding: 0.3em 1em;
   text-decoration: none;
-  font-size: 0.85em;
+  /*font-size: 0.85em;*/
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: bold;
+  font-family: Arial, sans-serif;
 }
 
 .strategies-block li {
-  background: white;
-  border: 1px solid gainsboro;
-  box-shadow: 0 0 5px rgba(0,0,0,0.2);
-  color: dimgrey;
+  background: black;
+  /* border: 1px solid gainsboro; */
+  /* box-shadow: 0 0 5px rgba(0,0,0,0.2); */
+  border-radius: 5px;
+  color: white;
   display: inline-block;
-  margin: 0.34em;
+  margin: 0.67% 1%;
   padding: 0;
+  flex: 1;
+  min-width: 45%;
 }
 
 .strategies-block li:hover {
@@ -180,4 +190,13 @@
 
 .has-vivid-cyan-blue-color {
   color: #25ade3;
+}
+
+
+@media only screen and (max-width: 1023px) {
+
+  .strategies-block li {
+    min-width: 98%;
+  }
+
 }
