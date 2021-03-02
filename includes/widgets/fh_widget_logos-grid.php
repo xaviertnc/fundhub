@@ -66,13 +66,17 @@ class FH_Logos_Grid extends WP_Widget {
   // Widget Frontend - Render Widget
   public function widget( $args, $instance )
   {
-    // $title = apply_filters( 'widget_title', $instance['title'] );
-    $classes = empty( $instance['classes'] ) ? ''
-      : ' ' . esc_attr( $instance['classes'] );
+    $classes = empty( $instance['classes'] )
+      ? '' : ' ' . esc_attr( $instance['classes'] );
     echo $args['before_widget'];
+    echo '    <!-- fundhub logos grid -->' . PHP_EOL;
+    if ( isset( $instance[ 'title' ] ) )
+    {
+       echo '    <div class="cta-click-on-logos">' .
+         wp_kses( $instance[ 'title' ], array( 'br' => array() ) ) .
+         '</div>' . PHP_EOL;
+    }
 ?>
-
-    <!-- fundhub logos grid -->
     <div class="fh-logos-grid<?=$classes?> framed">
 <?php $this->render_logos_grid( $instance['post_type'] ); ?>
     </div>
@@ -91,7 +95,7 @@ class FH_Logos_Grid extends WP_Widget {
     }
     else
     {
-      $title = __( 'Click on the logos for more information.', 'fundhub' );
+      $title = '';
     }
     if( isset( $instance[ 'post_type' ] ) )
     {
@@ -111,6 +115,12 @@ class FH_Logos_Grid extends WP_Widget {
     }
     $post_types = get_post_types( array( 'public' => true ) );
 ?>
+<p>
+  <label for="<?=$this->get_field_id( 'title' )?>">Callout Text</label>
+  <textarea class="widefat" id="<?=$this->get_field_id( 'title' )?>" name="<?=
+    $this->get_field_name( 'title' )?>"><?=wp_kses( $title,
+      array( 'br' => array() ) )?></textarea>
+</p>
 <p>
   <label for="<?=$this->get_field_id( 'post_type' )?>">Post Type</label>
   <select class="widefat" id="<?php echo $this->get_field_id( 'post_type' ); ?>"
@@ -135,6 +145,8 @@ class FH_Logos_Grid extends WP_Widget {
   public function update( $new_instance, $old_instance )
   {
     $instance = array();
+    $instance['title'] = ( ! empty( $new_instance['title'] ) )
+      ? wp_kses( $new_instance['title'], array( 'br' => array() ) ) : '';
     $instance['post_type'] = ( ! empty( $new_instance['post_type'] ) )
       ? strip_tags( $new_instance['post_type'] ) : '';
     $instance['classes'] = ( ! empty( $new_instance['classes'] ) )
