@@ -30,7 +30,7 @@ a, a:visited {
 }
 
 .sidebar-panel .wp-block-button {
-  width: 100%;    
+  width: 100%;
 }
 
 .sidebar-panel .wp-block-button .wp-block-button__link {
@@ -74,6 +74,22 @@ a, a:visited {
   padding: 1.5em 1em;
 }
 
+.about:before {
+  color: gainsboro;
+  content: 'Select and replace the content below with actual manager information.';
+  display: block;
+  font-size: 0.8em;
+}
+
+.about:after {
+  color: gainsboro;
+  content: 'About Section:' !important;
+  display: block;
+  font-weight: bold;
+  padding-left: 1em;
+  padding-top: 0.3em;
+}
+
 .strategies-block {
   margin: 1em 0 !important;
   padding: 1em 1em 0;
@@ -94,22 +110,6 @@ a, a:visited {
 .strategies-edit-zone:after {
   color: gainsboro;
   content: 'Strategies Page Auto-Content Section:' !important;
-  display: block;
-  font-weight: bold;
-  padding-left: 1em;
-  padding-top: 0.3em;
-}
-
-.about:before {
-  color: gainsboro;
-  content: 'Select and replace the content below with actual manager information.';
-  display: block;
-  font-size: 0.8em;
-}
-
-.about:after {
-  color: gainsboro;
-  content: 'About Section:' !important;
   display: block;
   font-weight: bold;
   padding-left: 1em;
@@ -144,6 +144,28 @@ a, a:visited {
   margin-top: 2em;
 }
 
+.extra-strategies {
+  /*background-color: whitesmoke;*/
+  border: 5px dotted whitesmoke;
+  padding: 1.5em 1em;
+}
+
+.extra-strategies:before {
+  color: gainsboro;
+  content: 'Select and replace the content below with actual manager information.';
+  display: block;
+  font-size: 0.8em;
+}
+
+.extra-strategies:after {
+  color: gainsboro;
+  content: 'Additional Strategies Section:' !important;
+  display: block;
+  font-weight: bold;
+  padding-left: 1em;
+  padding-top: 0.3em;
+}
+
 .video-gallery:before {
   color: gainsboro;
   content: 'Add videos here... Add them right next to each other using "insert after" or "duplicate".';
@@ -157,7 +179,7 @@ a, a:visited {
   display: block;
   font-weight: bold;
   padding-left: 1em;
-  padding-top: 0.3em;  
+  padding-top: 0.3em;
 }
 
 .video-gallery > div > .wp-block-embed {
@@ -192,7 +214,7 @@ a, a:visited {
   display: block;
   font-weight: bold;
   padding-left: 1em;
-  padding-top: 0.3em; 
+  padding-top: 0.3em;
 }
 
 .cta-sidebar .wp-block-group__inner-container {
@@ -221,14 +243,14 @@ a, a:visited {
 
 .factsheets:before {
   color: gainsboro;
-  content: 'Factsheets Panel:';    
+  content: 'Factsheets Panel:';
   display: block;
   font-weight: bold;
 }
 
 .media:before {
   color: gainsboro;
-  content: 'Media Panel:';    
+  content: 'Media Panel:';
   display: block;
   font-weight: bold;
 }
