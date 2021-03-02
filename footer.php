@@ -22,10 +22,6 @@
 <!-- Site Footer Content Container -->
 <div class="container" role="presentation">
 
-<!-- Site Footer Content Left -->
-<p class="footer-content-left">&copy; Copyright - BLACK ONYX 2020</p>
-<!-- /Site Footer Content Left -->
-
 <!-- Secondary Nav -->
 <nav id="secondary-nav">
 
@@ -40,6 +36,10 @@
 
 </nav>
 <!-- /Secondary Nav -->
+
+<!-- Site Footer Content Left -->
+<p class="footer-content-left">&copy; Copyright - BLACK ONYX 2020</p>
+<!-- /Site Footer Content Left -->
 
 </div>
 <!-- /Site Footer Content Container -->
