@@ -12,6 +12,28 @@ class FH_Lib {
   }
 
 
+  static function delete_attachments( $post_id )
+  {
+    // Get all attachments IDs.
+    $att_ids = get_posts( [
+      'numberposts' => -1,
+      'post_type'   => 'attachment',
+      'fields'      => 'ids',
+      'post_status' => 'any',
+      'post_parent' => $post_id,
+    ] );
+
+    // Delete each attachments.
+    if ( $att_ids && is_array( $att_ids ) )
+    {
+      foreach( $att_ids as $id )
+      {
+        wp_delete_attachment( $id, true );
+      }
+    }
+  }
+
+
   static function find_attachment_id( $file_href )
   {
     global $wpdb;
@@ -85,5 +107,40 @@ class FH_Lib {
     return true;
   }
 
+
+  static function upload_file( $file, $allowed_mime_types = [] )
+  {
+    include_once( ABSPATH . 'wp-admin/includes/file.php'  );
+    include_once( ABSPATH . 'wp-admin/includes/media.php' );
+    include_once( ABSPATH . 'wp-admin/includes/image.php' );
+
+    if ( ! in_array( $file['type'], $allowed_mime_types ) ) {
+      return new \WP_Error( 'upload',
+        sprintf( __( 'Uploaded files need to be one of the following file types: %s', 
+          'my-listing' ), implode( ', ', array_keys( $allowed_mime_types ) ) ) );
+    }
+
+    $upload = wp_handle_upload( $file, [ 'test_form' => false ] );
+
+    if ( ! empty( $upload['error'] ) ) {
+      return new \WP_Error( 'upload', $upload[ 'error' ] );
+    }
+
+    $wp_filetype = wp_check_filetype( $upload[ 'file' ] );
+    $attach_id = wp_insert_attachment(
+      [
+        'post_mime_type' => $wp_filetype[ 'type' ],
+        'post_title' => sanitize_file_name( $upload[ 'file' ] ),
+        'post_content' => '',
+        'post_status' => 'inherit'
+      ],
+      $upload[ 'file' ]
+    );
+
+    $attach_data = wp_generate_attachment_metadata( $attach_id, $upload[ 'file' ] );
+    wp_update_attachment_metadata( $attach_id, $attach_data );
+
+    return $attach_id;
+  }
 
 } // end: FH_Lib
