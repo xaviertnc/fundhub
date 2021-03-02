@@ -460,7 +460,7 @@ class FH_Export_Data {
 
   function export_general_media()
   {
-    $dir_parts = array( $this->export_dir, 'unattached.json' );
+    $dir_parts = array( $this->export_dir, 'unattached-media.json' );
     $unattached_data_file = $this->fs_join( $dir_parts );
 
     $unattached = $this->get_post_type( 'attachment', array( 'post_parent' => 0 ) );
