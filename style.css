@@ -139,7 +139,7 @@ img {
 
 .content-left {
   float: left;
-  padding-right: 1.5em;
+  padding-right: 2em;
   width: 69%;
 }
 
@@ -432,6 +432,10 @@ img {
   text-align: center;
 }
 
+.finreg-logos img {
+  max-width: 450px;
+}
+
 .post-strategies {
   margin: 2em 0;
 }
@@ -697,6 +701,10 @@ img {
 }
 
 @media only screen and (max-width: 1023px) {
+
+  .lower-advert-space figure {
+    margin: 0 0.5em;
+  }
 
   .video-gallery figure {
     width: 48%;
@@ -1272,8 +1280,8 @@ img {
   }
 
   .cta-goto-website {
-    width: 112%;
-    margin: 0px -6%;
+    width: 111%;
+    margin: 0px -5.5%;
   }
 
 }
