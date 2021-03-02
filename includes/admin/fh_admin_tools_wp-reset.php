@@ -49,7 +49,10 @@ class FH_Reset_WP {
     $siteurl = get_option( 'siteurl' );
     $site_icon = get_option( 'site_icon' );
     $theme_mods = get_option( $mods_option );
-    $uploads_dir = ABSPATH . get_option( 'upload_path' );
+
+    $uploads_info = wp_get_upload_dir();
+    $uploads_dir = $uploads_info[ 'path' ];
+
     $home = get_option( 'home' );
 
     if ( $do_restore_theme )
