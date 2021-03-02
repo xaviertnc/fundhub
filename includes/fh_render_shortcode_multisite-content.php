@@ -9,7 +9,7 @@ function fh_render_multisite_post( $atts, $default_content = null )
    */
   $attributes = shortcode_atts(
     array(
-      'blog' => 1,
+      'blog' => get_current_blog_id(),
       'post' => 0
     ),
     $atts
@@ -32,4 +32,4 @@ function fh_render_multisite_post( $atts, $default_content = null )
   return $content ?: $default_content;
 }
 
-add_shortcode('multisite-post', 'fh_render_multisite_post');
+add_shortcode('multisite-content', 'fh_render_multisite_post');
