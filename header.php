@@ -19,7 +19,8 @@
 <?php wp_head(); ?>
 <!-- /WP HEAD -->
 <!-- TRACKING & OTHER ADDITIONAL SCRIPTS -->
-<?php echo get_option( 'fh_header_scripts' ), PHP_EOL; ?>
+<?php echo LOGGED_IN ? '<!-- ...No tracking admins when logged in... -->'
+  : get_option( 'fh_header_scripts' ), PHP_EOL; ?>
 <!-- /TRACKING & OTHER ADDITIONAL SCRIPTS -->
 </head>
 
@@ -27,7 +28,8 @@
 <?php wp_body_open(); ?>
 
 <!-- TRACKING & OTHER NO-SCRIPT TAGS -->
-<?php echo get_option( 'fh_noscripts' ), PHP_EOL; ?>
+<?php echo LOGGED_IN ? '<!-- ...No tracking admins when logged in... -->'
+  : get_option( 'fh_noscripts' ), PHP_EOL; ?>
 <!-- /TRACKING & OTHER NO-SCRIPT TAGS -->
 
 <!-- Skip To Content Link -->
