@@ -38,7 +38,9 @@
 <!-- /Secondary Nav -->
 
 <!-- Site Footer Content Left -->
-<p class="footer-content-left">&copy; Copyright - BLACK ONYX 2020</p>
+<p class="footer-content-left">
+	&copy; Copyright - BLACK ONYX. All Rights Reserved. <?=date('Y')?>
+</p>
 <!-- /Site Footer Content Left -->
 
 </div>
